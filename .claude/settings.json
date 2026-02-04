@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "endor-mcp-server": {
+      "command": "endorctl",
+      "args": [
+        "ai-tools",
+        "mcp-server"
+      ],
+      "env": {
+        "ENDOR_NAMESPACE": "${ENDOR_NAMESPACE}",
+        "ENDOR_API": "https://api.endorlabs.com"
+      }
+    }
+  }
+}
