@@ -309,7 +309,6 @@ The skill uses these tools from the Endor Labs MCP server:
 | Tool | Description |
 |------|-------------|
 | `scan_repository` | Full repository security scan |
-| `endor-labs-cli` | SAST scanning with Endor Labs MCP Server |
 
 ### Vulnerability Analysis
 | Tool | Description |
