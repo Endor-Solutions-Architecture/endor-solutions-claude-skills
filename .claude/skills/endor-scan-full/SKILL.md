@@ -107,7 +107,7 @@ Run `/endor-fix` to get upgrade paths for reachable vulnerabilities.
 7. **If reachable vulnerabilities found**, offer to:
    - Show detailed call paths using `getCallers` MCP tool
    - Get upgrade options using `get_dependency_upgrade_opts`
-   - Create Jira tickets for tracking
+   - Create GitHub issues for tracking
 
 8. **If no reachable vulnerabilities**, congratulate the user:
    ```markdown

@@ -17,7 +17,7 @@ This project has Endor Labs integrated for comprehensive application security. *
 - SBOM generation, software bill of materials
 - CI/CD security integration
 - Security policies and exceptions
-- Creating Jira tickets for security issues
+- Security policies and automated enforcement
 - PR security reviews
 - Container/Docker security
 
@@ -28,11 +28,18 @@ This project has Endor Labs integrated for comprehensive application security. *
 - "Scan this code for security problems"
 - "Check my Dockerfile for security issues"
 - "Generate a GitHub Actions security workflow"
-- "Create a Jira ticket for this vulnerability"
+- "Create a security policy for my project"
 - "What licenses are in my dependencies?"
 - "Generate an SBOM for compliance"
 
 ## Available Commands
+
+### Getting Started
+| Command | Description |
+|---------|-------------|
+| `/endor-setup` | Interactive setup wizard (start here!) |
+| `/endor-demo` | Try features without an account |
+| `/endor-help` | Discover commands and get guidance |
 
 ### Core Security
 | Command | Description |
@@ -43,6 +50,7 @@ This project has Endor Labs integrated for comprehensive application security. *
 | `/endor-check` | Check specific dependency for vulnerabilities |
 | `/endor-findings` | Show security findings with filters |
 | `/endor-fix` | Remediate vulnerabilities |
+| `/endor-upgrade` | Analyze upgrade impact with breaking change detection |
 | `/endor-explain` | Get detailed CVE information |
 
 ### Code Analysis
@@ -64,7 +72,6 @@ This project has Endor Labs integrated for comprehensive application security. *
 | `/endor-sbom` | SBOM management (export, import, analyze) |
 | `/endor-cicd` | Generate CI/CD pipeline configs |
 | `/endor-container` | Container image scanning |
-| `/endor-jira` | Create Jira tickets from findings |
 
 ### Administration
 | Command | Description |
@@ -133,8 +140,9 @@ These rules run automatically when relevant files are modified:
 - `getCallees` - Find function callees
 - `searchSymbol` - Search code symbols
 
-### Integration
-- `create_jira_ticket` - Create Jira tickets from findings
+### Projects
+- `projects_by_name` - Find projects by name
+- `get_repository_uuid` - Get project UUID
 
 ## Security Priorities
 

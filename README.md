@@ -2,6 +2,25 @@
 
 A Claude Code skill that integrates Endor Labs security scanning into your development workflow. Scan for vulnerabilities, check dependencies, and get remediation guidance directly from Claude.
 
+## Quick Start (5 minutes)
+
+**New to Endor Labs?** Get started in 3 steps:
+
+```bash
+# 1. Install the CLI
+brew install endorlabs/tap/endorctl   # or: npm install -g endorctl
+
+# 2. Authenticate (opens browser)
+endorctl init
+
+# 3. Set your namespace
+export ENDOR_NAMESPACE=your-namespace
+```
+
+Then run `/endor-setup` in Claude Code to verify everything works!
+
+**Just want to see what it does?** Run `/endor-demo` - no account needed.
+
 ## Features
 
 ### Security Scanning
@@ -20,7 +39,6 @@ A Claude Code skill that integrates Endor Labs security scanning into your devel
 ### DevOps Integration
 - **CI/CD Pipelines**: Generate security workflows for GitHub, GitLab, Jenkins, Azure DevOps
 - **PR Security Review**: Pre-merge security checks
-- **Jira Integration**: Create tickets from security findings
 - **Policy Management**: Create and manage security policies
 
 ### Automation
@@ -114,6 +132,14 @@ Add to your Claude Code settings (`~/.claude/settings.json` or project `.claude/
 
 ## Usage
 
+### Getting Started Commands
+
+| Command | Description |
+|---------|-------------|
+| `/endor-setup` | **Start here!** Interactive setup wizard |
+| `/endor-demo` | Try features without an account |
+| `/endor-help` | Discover all commands and get guidance |
+
 ### Available Commands
 
 #### Core Security
@@ -125,6 +151,7 @@ Add to your Claude Code settings (`~/.claude/settings.json` or project `.claude/
 | `/endor-check <pkg>@<ver>` | Check a specific dependency for vulnerabilities |
 | `/endor-findings` | Show all security findings with filters |
 | `/endor-fix <CVE>` | Get remediation guidance for a vulnerability |
+| `/endor-upgrade` | Analyze upgrade impact with breaking change detection |
 | `/endor-explain <CVE>` | Get detailed explanation of a CVE |
 
 #### Code Analysis
@@ -146,7 +173,6 @@ Add to your Claude Code settings (`~/.claude/settings.json` or project `.claude/
 | `/endor-sbom` | SBOM management (export, import, analyze) |
 | `/endor-cicd <platform>` | Generate CI/CD security pipeline (github, gitlab, jenkins, etc.) |
 | `/endor-container <image>` | Scan container images |
-| `/endor-jira` | Create Jira tickets from findings |
 
 #### Administration
 | Command | Description |
@@ -184,7 +210,7 @@ You can also just describe what you want - Claude will automatically use the app
 - "Check my Dockerfile for security issues"
 - "Generate a GitHub Actions security workflow"
 - "Are there any license issues in my dependencies?"
-- "Create a Jira ticket for this CVE"
+- "Generate a security policy for critical vulnerabilities"
 
 ### Example Session
 
@@ -307,10 +333,11 @@ The skill uses these tools from the Endor Labs MCP server:
 | `getCallees` | Find what a function calls |
 | `searchSymbol` | Search for code symbols |
 
-### Integration
+### Projects
 | Tool | Description |
 |------|-------------|
-| `create_jira_ticket` | Create Jira tickets from findings |
+| `projects_by_name` | Find projects by name |
+| `get_repository_uuid` | Get project UUID |
 
 ## Automatic Rules
 

@@ -75,7 +75,7 @@ Present as:
 |------|---------|--------|--------|
 | pr-block-critical | Critical + Reachable | Block merge | Active |
 | slack-notify-high | High severity | Slack notification | Active |
-| jira-create-critical | Critical | Create Jira ticket | Active |
+| webhook-critical | Critical | Webhook notification | Active |
 ```
 
 ### Show Policy Details
@@ -136,7 +136,7 @@ I'll help you create a finding policy. Let me ask a few questions:
    - Block (fail CI/prevent merge)
    - Warn (allow but flag)
    - Notify (send alerts)
-   - Create ticket (Jira/GitHub issue)
+   - Create ticket (GitHub issue)
 
 3. **Any exceptions?**
    - Exclude test dependencies
@@ -217,7 +217,7 @@ spec:
       in our codebase. Verified by code review on 2024-02-15.
     approved_by: security-team
     expires: "2024-12-31"
-    ticket: JIRA-1234
+    ticket: GH-1234
 ```
 
 ### Create Action Policy
@@ -234,9 +234,8 @@ spec:
 2. [ ] Post PR comment
 3. [ ] Send Slack notification
 4. [ ] Send email alert
-5. [ ] Create Jira ticket
-6. [ ] Create GitHub issue
-7. [ ] Webhook call
+5. [ ] Create GitHub issue
+6. [ ] Webhook call
 ```
 
 **Generated policy:**
@@ -272,10 +271,11 @@ spec:
       template: |
         :warning: Critical vulnerability in {{.Repository}}
         CVE: {{.CVE}} | Package: {{.Package}}
-    - type: JIRA_TICKET
-      project: SEC
-      issue_type: Bug
-      priority: Highest
+    - type: GITHUB_ISSUE
+      repository: "{{.Repository}}"
+      labels:
+        - security
+        - critical
 ```
 
 ### Policy Templates
