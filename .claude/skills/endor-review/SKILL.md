@@ -1,3 +1,8 @@
+---
+name: endor-review
+description: Analyze the current git diff or branch for security issues before creating a PR
+---
+
 # Endor Labs: PR Security Review
 
 Analyze the current git diff or branch for security issues before creating a PR.

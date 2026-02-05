@@ -1,3 +1,8 @@
+---
+name: endor-container
+description: Scan container images for vulnerabilities, misconfigurations, and compliance issues
+---
+
 # Endor Labs: Container Security
 
 Scan container images for vulnerabilities, misconfigurations, and compliance issues.

@@ -1,3 +1,8 @@
+---
+name: endor-score
+description: View Endor Labs health scores for open source packages
+---
+
 # Endor Labs: Package Health Scores
 
 View Endor Labs health scores for open source packages - evaluate packages before adding them as dependencies.

@@ -1,3 +1,8 @@
+---
+name: endor-sast
+description: Perform static application security testing to find code vulnerabilities
+---
+
 # Endor Labs: SAST Analysis
 
 Perform static application security testing to find code vulnerabilities.

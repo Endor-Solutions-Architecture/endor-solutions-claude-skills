@@ -1,3 +1,8 @@
+---
+name: endor-check
+description: Check if a specific dependency has known vulnerabilities
+---
+
 # Endor Labs: Check Dependency
 
 Check if a specific dependency has known vulnerabilities.

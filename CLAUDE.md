@@ -38,7 +38,8 @@ This project has Endor Labs integrated for comprehensive application security. *
 | Command | Description |
 |---------|-------------|
 | `/endor` | Main assistant - natural language queries |
-| `/endor-scan` | Full repository security scan |
+| `/endor-scan` | Quick repository security scan |
+| `/endor-scan-full` | Full scan with reachability analysis (call graphs, entry points) |
 | `/endor-check` | Check specific dependency for vulnerabilities |
 | `/endor-findings` | Show security findings with filters |
 | `/endor-fix` | Remediate vulnerabilities |

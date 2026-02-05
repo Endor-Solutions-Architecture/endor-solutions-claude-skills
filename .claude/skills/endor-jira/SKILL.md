@@ -1,3 +1,8 @@
+---
+name: endor-jira
+description: Create Jira tickets from security findings, sync status, and manage security issues
+---
+
 # Endor Labs: Jira Integration
 
 Create Jira tickets from security findings, sync status, and manage security issues.

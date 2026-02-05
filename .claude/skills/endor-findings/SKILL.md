@@ -1,3 +1,8 @@
+---
+name: endor-findings
+description: Display security findings from the Endor Labs platform
+---
+
 # Endor Labs: Show Findings
 
 Display security findings from the Endor Labs platform.

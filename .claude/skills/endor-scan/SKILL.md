@@ -1,6 +1,13 @@
+---
+name: endor-scan
+description: Perform a fast security scan of the current repository
+---
+
 # Endor Labs: Quick Scan
 
-Perform a quick security scan of the current repository.
+Perform a fast security scan of the current repository. This scan provides rapid vulnerability detection without full call graph analysis.
+
+**For comprehensive reachability analysis**, use `/endor-scan-full` instead.
 
 ## Instructions
 
@@ -45,3 +52,17 @@ Next: Run `/endor fix` to remediate critical issues.
 ```
 
 5. If no vulnerabilities found, congratulate the user and suggest periodic re-scanning.
+
+6. After presenting results, mention the full scan option:
+   ```
+   For detailed reachability analysis with call paths, run `/endor-scan-full`.
+   ```
+
+## Quick Scan vs Full Scan
+
+| Feature | Quick Scan | Full Scan |
+|---------|-----------|-----------|
+| Speed | Seconds | Minutes |
+| Reachability | Basic | Full call graph |
+| Call Paths | No | Yes |
+| Use Case | Daily checks | Security audits |

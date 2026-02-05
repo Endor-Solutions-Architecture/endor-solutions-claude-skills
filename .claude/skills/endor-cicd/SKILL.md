@@ -1,3 +1,8 @@
+---
+name: endor-cicd
+description: Generate CI/CD pipeline configurations for security scanning with Endor Labs
+---
+
 # Endor Labs: CI/CD Integration
 
 Generate CI/CD pipeline configurations for security scanning with Endor Labs.

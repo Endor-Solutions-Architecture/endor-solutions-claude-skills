@@ -121,6 +121,7 @@ Add to your Claude Code settings (`~/.claude/settings.json` or project `.claude/
 |---------|-------------|
 | `/endor` | Main assistant - natural language security queries |
 | `/endor-scan` | Quick repository scan for all security issues |
+| `/endor-scan-full` | Full scan with reachability analysis (call graphs, entry points) |
 | `/endor-check <pkg>@<ver>` | Check a specific dependency for vulnerabilities |
 | `/endor-findings` | Show all security findings with filters |
 | `/endor-fix <CVE>` | Get remediation guidance for a vulnerability |
@@ -156,7 +157,8 @@ Add to your Claude Code settings (`~/.claude/settings.json` or project `.claude/
 ### Quick Examples
 
 ```
-/endor scan                        # Full security scan
+/endor scan                        # Quick security scan
+/endor-scan-full                   # Full scan with reachability analysis
 /endor check lodash@4.17.20        # Check specific package
 /endor findings critical reachable # Filter findings
 /endor fix CVE-2021-23337          # Get fix guidance

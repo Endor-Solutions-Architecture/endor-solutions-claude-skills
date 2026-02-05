@@ -1,3 +1,8 @@
+---
+name: endor-policy
+description: Create, view, and manage security policies for automated enforcement
+---
+
 # Endor Labs: Policy Management
 
 Create, view, and manage security policies for automated enforcement.

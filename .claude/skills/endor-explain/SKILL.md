@@ -1,3 +1,8 @@
+---
+name: endor-explain
+description: Get detailed information about a specific vulnerability or security finding
+---
+
 # Endor Labs: Explain Vulnerability
 
 Get detailed information about a specific vulnerability or security finding.

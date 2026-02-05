@@ -1,3 +1,8 @@
+---
+name: endor-api
+description: Execute custom queries against the Endor Labs API for advanced use cases
+---
+
 # Endor Labs: Direct API Access
 
 Execute custom queries against the Endor Labs API for advanced use cases.

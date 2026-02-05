@@ -1,3 +1,8 @@
+---
+name: endor-license
+description: Analyze license compliance, identify license risks, and generate license reports
+---
+
 # Endor Labs: License Compliance
 
 Analyze license compliance, identify license risks, and generate license reports.

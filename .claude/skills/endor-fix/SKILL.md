@@ -1,3 +1,8 @@
+---
+name: endor-fix
+description: Help remediate security vulnerabilities by finding safe upgrade paths
+---
+
 # Endor Labs: Fix Vulnerabilities
 
 Help remediate security vulnerabilities by finding safe upgrade paths.

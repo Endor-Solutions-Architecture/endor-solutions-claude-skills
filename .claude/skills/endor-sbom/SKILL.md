@@ -1,3 +1,8 @@
+---
+name: endor-sbom
+description: Manage Software Bill of Materials (SBOM) - export, import, analyze, and compare
+---
+
 # Endor Labs: SBOM Management
 
 Manage Software Bill of Materials (SBOM) - export, import, analyze, and compare SBOMs.

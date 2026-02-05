@@ -1,3 +1,8 @@
+---
+name: endor-secrets
+description: Scan for exposed secrets, credentials, API keys, and sensitive data in your codebase
+---
+
 # Endor Labs: Secrets Scanner
 
 Scan for exposed secrets, credentials, API keys, and sensitive data in your codebase.
