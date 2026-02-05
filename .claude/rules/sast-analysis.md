@@ -17,6 +17,27 @@ This rule activates when you:
 - Write code that processes user input
 - Create API endpoints or database queries
 
+# Static Application Security Testing (SAST) Rule (Endor Labs via MCP)
+
+## Workflow
+
+Whenever a file is modified in the repository, and before the end of an agent session perform the following workflow:
+
+- Run `endor-cli-tools` using the `scan` tool via the MCP server to perform SAST scans as described above.
+- If any vulnerabilities or errors are found:
+  - Present the issues to the user.
+  - The AI agent must attempt to automatically correct all errors and vulnerabilities, including code errors, security issues, and best practice violations, before session completion.
+  - Recommend and apply appropriate fixes (e.g., input sanitization, validation, escaping, secure APIs).
+  - Continue scanning and correcting until all critical issues have been resolved or no further automated remediation is possible.
+- If an error occurs in any MCP server tool call (such as missing required parameters like version, invalid arguments, or tool invocation failures):
+  - The AI agent must review the error, determine the cause, and automatically correct the tool call or input parameters.
+  - Re-attempt the tool call with the corrected parameters.
+  - Continue this process until the tool call succeeds or it is determined that remediation is not possible, in which case the issue and reason must be reported.
+- Save scan results and remediation steps in a security log or as comments for audit purposes.
+- Do not invoke Opengrep directly.
+
+This rule ensures all code changes are automatically reviewed and remediated for common security vulnerabilities and errors using `endor-cli-tools` and the MCP server, with Opengrep as the underlying engine.
+
 ## Vulnerability Categories to Detect
 
 ### Injection Vulnerabilities

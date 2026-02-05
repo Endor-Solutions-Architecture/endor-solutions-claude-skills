@@ -1,6 +1,6 @@
 ---
 description: Detect and prevent secrets, credentials, and API keys from being committed to code
-globs: "**/*.js, **/*.ts, **/*.jsx, **/*.tsx, **/*.py, **/*.go, **/*.java, **/*.rb, **/*.php, **/*.cs, **/*.rs, **/*.swift, **/*.kt, **/*.scala, **/*.sh, **/*.bash, **/*.zsh, **/*.env, **/*.env.*, **/*.config, **/*.conf, **/*.cfg, **/*.ini, **/*.yaml, **/*.yml, **/*.json, **/*.xml, **/*.properties, **/*.toml, **/Dockerfile, **/docker-compose*.yml, **/*.tf, **/*.tfvars, **/serverless.yml, **/.npmrc, **/.pypirc, **/credentials*, **/secrets*, **/*secret*, **/*credential*, **/*password*, **/*apikey*, **/*api_key*, **/*token*"
+globs: "**/*"
 alwaysApply: true
 ---
 
@@ -16,6 +16,24 @@ This rule activates when you:
 - Create environment files or templates
 - Modify CI/CD configurations
 - Write infrastructure-as-code (Terraform, CloudFormation, etc.)
+
+# Leaked Secrets Detection Rule (Endor Labs via MCP)
+
+## Workflow
+Whenever a file is modified in the repository, and before the end of an agent session:
+- Run `endor-cli-tools` using the `scan` tool via the MCP server to check for leaked secrets.
+- Ensure the scan includes all file types and respects `.gitignore` unless otherwise configured.
+- If any secrets or errors are detected:
+  - Remove the exposed secret or correct the error immediately.
+  - The AI agent must attempt to automatically correct all detected secrets and errors before session completion.
+  - Re-run the scan to verify the secret or error has been properly removed or resolved.
+- If an error occurs in any MCP server tool call (such as missing required parameters like version, invalid arguments, or tool invocation failures):
+  - The AI agent must review the error, determine the cause, and automatically correct the tool call or input parameters.
+  - Re-attempt the tool call with the corrected parameters.
+  - Continue this process until the tool call succeeds or it is determined that remediation is not possible, in which case the issue and reason must be reported.
+- Save scan results and remediation steps in a security log or as comments for audit purposes.
+
+This rule ensures no accidental credentials, tokens, API keys, or secrets are committed or remain in the project history. The scan may be performed at the end of an agent session, provided all modifications are checked and remediated before session completion.
 
 ## Secret Patterns to Detect
 
