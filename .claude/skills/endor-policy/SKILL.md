@@ -1,368 +1,173 @@
 ---
 name: endor-policy
-description: Create, view, and manage security policies for automated enforcement
+description: |
+  Create, view, and manage security policies for automated enforcement. Define rules for blocking PRs, requiring reviews, and enforcing security standards.
+  - MANDATORY TRIGGERS: endor policy, security policy, create policy, policy management, enforcement policy, endor-policy, block critical, policy gate
 ---
 
-# Endor Labs: Policy Management
+# Endor Labs Policy Management
 
-Create, view, and manage security policies for automated enforcement.
+Create and manage security policies for automated enforcement.
 
-## Arguments
+## Prerequisites
 
-$ARGUMENTS - Action: `list`, `show <name>`, `create`, `templates`, `validate`, `import`, `export`
+- Endor Labs MCP server configured (run `/endor-setup` if not)
+- Admin access to the Endor Labs namespace
 
-## Instructions
+## Policy Types
 
-### Parse Arguments
+| Type | Purpose |
+|------|---------|
+| Finding Policy | Define what security issues to flag or block |
+| Exception Policy | Create exceptions for accepted risks |
+| Action Policy | Automate responses (block PR, notify, create ticket) |
 
-| Argument | Action |
-|----------|--------|
-| `list` | List all policies in namespace |
-| `show <name>` | Show details of a specific policy |
-| `create` | Interactive policy creation |
-| `create finding` | Create a finding policy |
-| `create exception` | Create an exception policy |
-| `create action` | Create an action policy |
-| `templates` | Show policy templates |
-| `validate` | Validate policies against current findings |
-| `import <file>` | Import policy from file |
-| `export <name>` | Export policy to file |
-| No argument | Show policy summary |
+## Available Policy Templates
 
-### Policy Types
+| Template | Description |
+|----------|-------------|
+| `block-critical-reachable` | Block PRs with critical reachable vulnerabilities |
+| `license-compliance` | Block copyleft licenses in commercial projects |
+| `sast-required` | Require SAST scan pass before merge |
+| `no-secrets` | Block any committed secrets |
+| `sbom-required` | Require SBOM generation on release |
+| `dependency-age` | Warn on dependencies older than N months |
+| `max-severity` | Block findings above a severity threshold |
 
-**1. Finding Policies**
-Define what security issues should be flagged and at what severity.
+## Workflow
 
-**2. Exception Policies**
-Create exceptions for specific findings (false positives, accepted risks).
+### Action: List Policies
 
-**3. Action Policies**
-Define automated actions when findings match criteria (block PR, notify, create ticket).
-
-### List Policies
-
-Use API to list policies:
-```
-GET /v1/namespaces/{namespace}/policies
-```
-
-Present as:
-```markdown
-## Security Policies
-
-**Namespace:** {namespace}
-**Total Policies:** {count}
-
-### Finding Policies ({count})
-
-| Name | Severity | Categories | Status |
-|------|----------|------------|--------|
-| block-critical-reachable | CRITICAL | Vulnerability | Active |
-| warn-high-severity | HIGH | All | Active |
-| license-compliance | HIGH | License | Active |
-
-### Exception Policies ({count})
-
-| Name | Finding | Reason | Expires |
-|------|---------|--------|---------|
-| lodash-accepted-risk | CVE-2021-23337 | Not exploitable in our context | 2024-12-31 |
-| internal-tool-exception | SAST-001 | False positive | Never |
-
-### Action Policies ({count})
-
-| Name | Trigger | Action | Status |
-|------|---------|--------|--------|
-| pr-block-critical | Critical + Reachable | Block merge | Active |
-| slack-notify-high | High severity | Slack notification | Active |
-| webhook-critical | Critical | Webhook notification | Active |
-```
-
-### Show Policy Details
-
-```markdown
-## Policy: block-critical-reachable
-
-**Type:** Finding Policy
-**Status:** Active
-**Created:** 2024-01-15
-**Last Modified:** 2024-02-20
-
-### Criteria
-
-```yaml
-match:
-  severity: CRITICAL
-  reachable: true
-  categories:
-    - VULNERABILITY
-    - SAST
-  exclude_tags:
-    - TEST_DEPENDENCY
-```
-
-### Actions
-
-- Block PR merge
-- Add PR comment with findings
-- Notify security team via Slack
-
-### Current Matches
-
-This policy currently matches **3 findings** in your namespace:
-
-| Finding | Package | CVE |
-|---------|---------|-----|
-| F-001 | lodash@4.17.15 | CVE-2021-23337 |
-| F-002 | axios@0.21.0 | CVE-2021-3749 |
-| F-003 | minimist@1.2.5 | CVE-2021-44906 |
-```
-
-### Create Finding Policy
-
-Interactive policy creation:
-
-```markdown
-## Create Finding Policy
-
-I'll help you create a finding policy. Let me ask a few questions:
-
-1. **What should trigger this policy?**
-   - Severity: CRITICAL / HIGH / MEDIUM / LOW / Any
-   - Categories: Vulnerability / SAST / Secrets / License / All
-   - Reachability: Reachable only / All
-
-2. **What action should be taken?**
-   - Block (fail CI/prevent merge)
-   - Warn (allow but flag)
-   - Notify (send alerts)
-   - Create ticket (GitHub issue)
-
-3. **Any exceptions?**
-   - Exclude test dependencies
-   - Exclude specific packages
-   - Exclude specific CVEs
-```
-
-**Generated policy:**
-```yaml
-apiVersion: v1
-kind: FindingPolicy
-metadata:
-  name: block-critical-vulnerabilities
-  namespace: {namespace}
-spec:
-  description: "Block critical reachable vulnerabilities"
-  enabled: true
-  match:
-    severity:
-      - FINDING_LEVEL_CRITICAL
-    categories:
-      - FINDING_CATEGORY_VULNERABILITY
-    tags:
-      include:
-        - FINDING_TAGS_REACHABLE_FUNCTION
-      exclude:
-        - FINDING_TAGS_TEST_DEPENDENCY
-  action:
-    type: BLOCK
-    notification:
-      slack:
-        channel: "#security-alerts"
-      email:
-        recipients:
-          - security@company.com
-```
-
-### Create Exception Policy
-
-```markdown
-## Create Exception Policy
-
-**What finding should be excepted?**
-- CVE ID: CVE-2021-23337
-- Package: lodash@4.17.15
-- Finding UUID: F-001
-
-**Reason for exception:**
-- [ ] False positive
-- [ ] Accepted risk (with mitigation)
-- [ ] Not applicable to our use case
-- [ ] Pending fix in next release
-
-**Exception details:**
-- Justification: {user provided}
-- Approved by: {user}
-- Expiration: {date or never}
-```
-
-**Generated policy:**
-```yaml
-apiVersion: v1
-kind: ExceptionPolicy
-metadata:
-  name: lodash-cve-2021-23337-exception
-  namespace: {namespace}
-spec:
-  description: "Exception for CVE-2021-23337 in lodash"
-  enabled: true
-  match:
-    cve: CVE-2021-23337
-    package: lodash
-    version: ">=4.17.0 <4.17.21"
-  exception:
-    reason: ACCEPTED_RISK
-    justification: |
-      The vulnerable function _.set() is not used with user-controlled input
-      in our codebase. Verified by code review on 2024-02-15.
-    approved_by: security-team
-    expires: "2024-12-31"
-    ticket: GH-1234
-```
-
-### Create Action Policy
-
-```markdown
-## Create Action Policy
-
-**Trigger conditions:**
-- When: New critical finding discovered
-- Scope: Production branches only
-
-**Actions to perform:**
-1. [ ] Block PR/merge
-2. [ ] Post PR comment
-3. [ ] Send Slack notification
-4. [ ] Send email alert
-5. [ ] Create GitHub issue
-6. [ ] Webhook call
-```
-
-**Generated policy:**
-```yaml
-apiVersion: v1
-kind: ActionPolicy
-metadata:
-  name: critical-finding-response
-  namespace: {namespace}
-spec:
-  description: "Automated response to critical findings"
-  enabled: true
-  trigger:
-    finding:
-      severity: CRITICAL
-      reachable: true
-    branch_pattern: "^(main|master|release/.*)$"
-  actions:
-    - type: BLOCK_MERGE
-      message: "Critical vulnerability detected. Please remediate before merging."
-    - type: PR_COMMENT
-      template: |
-        ## Security Alert
-
-        A critical reachable vulnerability was detected:
-        - **CVE:** {{.CVE}}
-        - **Package:** {{.Package}}
-        - **Severity:** {{.Severity}}
-
-        Please update to a fixed version before merging.
-    - type: SLACK_NOTIFICATION
-      channel: "#security-alerts"
-      template: |
-        :warning: Critical vulnerability in {{.Repository}}
-        CVE: {{.CVE}} | Package: {{.Package}}
-    - type: GITHUB_ISSUE
-      repository: "{{.Repository}}"
-      labels:
-        - security
-        - critical
-```
-
-### Policy Templates
-
-```markdown
-## Policy Templates
-
-### 1. Block Critical Reachable
-Block merges when critical reachable vulnerabilities exist.
-```
-/endor-policy create from-template block-critical
-```
-
-### 2. License Compliance
-Enforce license policies (block GPL in commercial projects).
-```
-/endor-policy create from-template license-compliance
-```
-
-### 3. SAST Required
-Require SAST scans pass before merge.
-```
-/endor-policy create from-template sast-required
-```
-
-### 4. Secrets Prevention
-Block any exposed secrets from being committed.
-```
-/endor-policy create from-template no-secrets
-```
-
-### 5. SBOM Required
-Require SBOM generation for releases.
-```
-/endor-policy create from-template sbom-required
-```
-
-### 6. Dependency Age
-Flag dependencies that haven't been updated in 2+ years.
-```
-/endor-policy create from-template dependency-age
-```
-```
-
-### Validate Policies
-
-Check policies against current state:
-
-```markdown
-## Policy Validation Results
-
-### block-critical-reachable
-**Status:** 3 findings would be blocked
-
-| Finding | Package | Status |
-|---------|---------|--------|
-| CVE-2021-23337 | lodash | Would block |
-| CVE-2021-3749 | axios | Would block |
-| CVE-2021-44906 | minimist | Would block |
-
-### license-compliance
-**Status:** 2 findings flagged
-
-| Package | License | Issue |
-|---------|---------|-------|
-| gpl-lib | GPL-3.0 | Copyleft in commercial project |
-| agpl-tool | AGPL-3.0 | Network copyleft |
-
-### Exceptions Applied
-
-| Exception | Finding | Status |
-|-----------|---------|--------|
-| lodash-accepted-risk | CVE-2021-23337 | Active (expires 2024-12-31) |
-
-### Recommendations
-
-1. Resolve 3 critical vulnerabilities to pass `block-critical-reachable`
-2. Review GPL dependencies for `license-compliance`
-3. Update exception `lodash-accepted-risk` - consider upgrading instead
-```
-
-### Import/Export
+Query existing policies:
 
 ```bash
-# Export policy
-endorctl api get --resource Policy --name block-critical > policy.yaml
-
-# Import policy
-endorctl api create --resource Policy --file policy.yaml
+endorctl api list --resource FindingPolicy -n $ENDOR_NAMESPACE
 ```
+
+Present results:
+
+```markdown
+## Active Security Policies
+
+| # | Policy | Type | Action | Status |
+|---|--------|------|--------|--------|
+| 1 | Block Critical Reachable | Finding | Block PR | Active |
+| 2 | License Compliance | Finding | Warn | Active |
+| 3 | No Secrets | Finding | Block PR | Active |
+```
+
+### Action: Create Policy
+
+#### Template: block-critical-reachable
+
+This policy blocks PRs that introduce critical reachable vulnerabilities.
+
+```bash
+endorctl api create --resource FindingPolicy -n $ENDOR_NAMESPACE --data '{
+  "meta": {
+    "name": "block-critical-reachable",
+    "description": "Block PRs with critical reachable vulnerabilities"
+  },
+  "spec": {
+    "finding_policy": {
+      "type": "FINDING_POLICY_TYPE_BLOCK",
+      "filter": "spec.level==FINDING_LEVEL_CRITICAL and spec.finding_tags contains FINDING_TAGS_REACHABLE_FUNCTION"
+    }
+  }
+}'
+```
+
+#### Template: license-compliance
+
+```bash
+endorctl api create --resource FindingPolicy -n $ENDOR_NAMESPACE --data '{
+  "meta": {
+    "name": "license-compliance",
+    "description": "Block strong copyleft licenses"
+  },
+  "spec": {
+    "finding_policy": {
+      "type": "FINDING_POLICY_TYPE_BLOCK",
+      "filter": "spec.finding_categories contains FINDING_CATEGORY_LICENSE_RISK and spec.level in [FINDING_LEVEL_CRITICAL, FINDING_LEVEL_HIGH]"
+    }
+  }
+}'
+```
+
+#### Template: no-secrets
+
+```bash
+endorctl api create --resource FindingPolicy -n $ENDOR_NAMESPACE --data '{
+  "meta": {
+    "name": "no-secrets",
+    "description": "Block any exposed secrets"
+  },
+  "spec": {
+    "finding_policy": {
+      "type": "FINDING_POLICY_TYPE_BLOCK",
+      "filter": "spec.finding_categories contains FINDING_CATEGORY_SECRETS"
+    }
+  }
+}'
+```
+
+#### Template: max-severity
+
+Ask the user for the maximum allowed severity, then create the policy accordingly.
+
+#### Custom Policy
+
+If the user wants a custom policy, help them build the filter using the filter reference from `/endor-findings`.
+
+### Action: Create Exception
+
+Create an exception for an accepted risk:
+
+```bash
+endorctl api create --resource ExceptionPolicy -n $ENDOR_NAMESPACE --data '{
+  "meta": {
+    "name": "exception-{finding-id}",
+    "description": "{reason for exception}"
+  },
+  "spec": {
+    "exception_policy": {
+      "finding_uuid": "{finding_uuid}",
+      "expiration": "{ISO-8601 date}",
+      "justification": "{business justification}"
+    }
+  }
+}'
+```
+
+### Present Policy Creation
+
+```markdown
+## Policy Created
+
+**Name:** {policy_name}
+**Type:** {Finding/Exception/Action}
+**Action:** {Block/Warn/Notify}
+**Status:** Active
+
+### Filter
+
+{Human-readable description of what this policy catches}
+
+### What This Policy Does
+
+{Description of the policy's effect}
+
+### Next Steps
+
+1. **Test policy:** Push a test commit to verify enforcement
+2. **Add to CI/CD:** `/endor-cicd` to integrate with your pipeline
+3. **View all policies:** `/endor-policy list`
+4. **Create exception:** `/endor-policy exception {finding-id}`
+```
+
+## Error Handling
+
+- **Insufficient permissions**: Suggest contacting the namespace admin
+- **Policy already exists**: Offer to update or create with a different name
+- **Invalid filter**: Help the user fix the filter syntax
+- **Auth error**: Suggest `/endor-setup`

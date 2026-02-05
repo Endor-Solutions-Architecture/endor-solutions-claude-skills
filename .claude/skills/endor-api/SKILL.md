@@ -1,172 +1,180 @@
 ---
 name: endor-api
-description: Execute custom queries against the Endor Labs API for advanced use cases
+description: |
+  Execute custom queries against the Endor Labs API for advanced use cases. Provides direct access to findings, projects, packages, and metrics endpoints.
+  - MANDATORY TRIGGERS: endor api, custom query, raw api, api query, endor-api, direct api, advanced query
 ---
 
-# Endor Labs: Direct API Access
+# Endor Labs Direct API Access
 
 Execute custom queries against the Endor Labs API for advanced use cases.
 
-## Arguments
+## Prerequisites
 
-$ARGUMENTS - API query description or raw filter
+- Endor Labs MCP server configured (run `/endor-setup` if not)
+- `endorctl` CLI installed
 
-## Instructions
+## API Endpoints
 
-This skill provides direct access to the Endor Labs API for power users.
+### Base URL
 
-### Parse User Intent
-
-**If natural language query:**
-Convert to appropriate API call:
-- "all projects" → List projects
-- "findings for project X" → Filter findings by project
-- "vulnerabilities from last week" → Filter by date
-- "count by severity" → Aggregation query
-
-**If raw filter provided:**
-Use directly in API call.
-
-### Common Query Patterns
-
-#### List Projects
 ```
-Resource: projects
-Filter: none (list all)
+https://api.endorlabs.com
 ```
 
-#### Findings by Project
-```
-Resource: findings
-Filter: spec.project_uuid=={project_uuid}
+### Common Endpoints
+
+| Endpoint | Description |
+|----------|-------------|
+| `GET /v1/namespaces/{ns}/findings` | Query findings |
+| `GET /v1/namespaces/{ns}/projects` | List projects |
+| `GET /v1/namespaces/{ns}/package-versions` | Package versions |
+| `GET /v1/namespaces/oss/metrics` | OSS package metrics |
+| `POST /v1/namespaces/{ns}/version-upgrades` | Upgrade analysis |
+| `GET /v1/namespaces/{ns}/version-upgrades/{uuid}` | Upgrade results |
+
+## Workflow
+
+### Step 1: Understand the Query
+
+Parse the user's request to determine:
+
+1. **Resource type**: findings, projects, packages, metrics, etc.
+2. **Filter**: What to filter by (severity, category, package, date, etc.)
+3. **Output**: What data to return
+
+### Step 2: Execute Query
+
+**Using endorctl CLI:**
+
+```bash
+# List resources with filter
+endorctl api list --resource {Resource} -n $ENDOR_NAMESPACE --filter "{filter}"
+
+# Get a single resource
+endorctl api get --resource {Resource} -n $ENDOR_NAMESPACE --uuid {uuid}
+
+# Create a resource
+endorctl api create --resource {Resource} -n $ENDOR_NAMESPACE --data '{json}'
 ```
 
-#### Findings by Date Range
+**Common Resource Types:**
+
+| Resource | Description |
+|----------|-------------|
+| `Finding` | Security findings |
+| `Project` | Scanned projects |
+| `PackageVersion` | Package versions |
+| `DependencyMetadata` | Dependency info |
+| `FindingPolicy` | Security policies |
+| `ExceptionPolicy` | Policy exceptions |
+| `RepositoryScan` | Scan results |
+
+### Step 3: Filter Syntax
+
+The Endor Labs API uses a filter syntax:
+
 ```
-Resource: findings
-Filter: meta.create_time > "2024-01-01T00:00:00Z"
+# Equality
+field==value
+
+# Contains
+field contains value
+
+# Not contains
+field not contains value
+
+# Multiple conditions (AND)
+field1==value1 and field2==value2
+
+# In list
+field in [value1, value2]
+
+# Comparison
+field > value
+field < value
 ```
 
-#### Count by Severity (Aggregation)
-```
-Resource: findings
-Group by: spec.level
+**Common filter examples:**
+
+```bash
+# Critical reachable vulnerabilities
+endorctl api list --resource Finding -n $ENDOR_NAMESPACE \
+  --filter "spec.level==FINDING_LEVEL_CRITICAL and spec.finding_tags contains FINDING_TAGS_REACHABLE_FUNCTION"
+
+# Findings for a specific project
+endorctl api list --resource Finding -n $ENDOR_NAMESPACE \
+  --filter "spec.project_uuid=={project_uuid}"
+
+# Projects by name
+endorctl api list --resource Project -n $ENDOR_NAMESPACE \
+  --filter "meta.name contains '{name}'"
+
+# Package metrics
+endorctl api list --resource Metric -n oss \
+  --filter "meta.name==package_version_scorecard and meta.parent_uuid=={pkg_uuid}"
 ```
 
-#### Findings with Specific Tags
-```
-Resource: findings
-Filter: spec.finding_tags contains [FINDING_TAGS_REACHABLE_FUNCTION, FINDING_TAGS_EXPLOITABLE]
-```
+### Step 4: Present Results
 
-#### Package Versions in Project
-```
-Resource: package-versions
-Filter: spec.project_uuid=={project_uuid}
-```
-
-#### OSS Package Scores
-```
-Namespace: oss
-Resource: metrics
-Filter: meta.name==package_version_scorecard and meta.parent_uuid=={pkg_uuid}
-```
-
-### Execution
-
-Use the `get` MCP tool for custom queries:
-```json
-{
-  "resource": "findings",
-  "filter": "spec.level==FINDING_LEVEL_CRITICAL",
-  "namespace": "your-namespace",
-  "page_size": 100
-}
-```
-
-### Response Format
+Format the API response based on the resource type:
 
 ```markdown
 ## API Query Results
 
-**Resource:** {resource}
+**Resource:** {resource_type}
 **Filter:** {filter}
-**Count:** {count}
+**Results:** {count}
 
-### Results
+### Data
 
-{formatted results as table or JSON}
+{Formatted table or structured output based on the response}
 
-### Raw Response (collapsed)
-<details>
-<summary>Show raw JSON</summary>
+### Raw Response
 
-```json
-{raw_response}
-```
-</details>
+{If the user wants raw data, provide the JSON}
 ```
 
-### Filter Syntax Reference
+## Example Queries
 
-**Operators:**
-- `==` - Equals
-- `!=` - Not equals
-- `contains` - Array/string contains
-- `not contains` - Array/string does not contain
-- `>`, `<`, `>=`, `<=` - Comparisons
-- `and` - Logical AND
-- `or` - Logical OR
-
-**Field Paths:**
-- `meta.name` - Resource name
-- `meta.create_time` - Creation timestamp
-- `meta.update_time` - Last update
-- `spec.*` - Resource-specific fields
-- `uuid` - Resource UUID
-
-**Values:**
-- Strings: `"value"` or `value`
-- Arrays: `[VALUE1, VALUE2]`
-- Booleans: `true`, `false`
-- Timestamps: `"2024-01-01T00:00:00Z"`
-
-### Available Resources
-
-| Resource | Description |
-|----------|-------------|
-| `projects` | Scanned repositories |
-| `findings` | Security issues |
-| `package-versions` | Dependency versions |
-| `dependencies` | Dependency relationships |
-| `repositories` | Connected repos |
-| `policies` | Security policies |
-| `metrics` | Scores and statistics |
-| `scan-results` | Scan executions |
-| `vulnerabilities` | CVE data (oss namespace) |
-
-### Example Queries
-
-**"Show me all findings from the last 7 days"**
-```
-Filter: meta.create_time > "{7_days_ago_iso}"
+### Find all critical findings
+```bash
+endorctl api list --resource Finding -n $ENDOR_NAMESPACE \
+  --filter "spec.level==FINDING_LEVEL_CRITICAL" \
+  --page-size 20
 ```
 
-**"Which projects have critical vulnerabilities?"**
-```
-Filter: spec.level==FINDING_LEVEL_CRITICAL
-Group by: spec.project_uuid
-```
-
-**"Get Endor Scores for react"**
-```
-Namespace: oss
-Resource: package-versions
-Filter: meta.name contains "npm://react@"
-Then get metrics with parent_uuid
+### Get project details
+```bash
+endorctl api list --resource Project -n $ENDOR_NAMESPACE \
+  --filter "meta.name contains 'my-project'"
 ```
 
-**"List all SAST findings in file auth.js"**
+### Check upgrade options
+```bash
+endorctl api create --resource VersionUpgrade -n $ENDOR_NAMESPACE \
+  --data '{
+    "context": {"type": "project", "id": "{project_uuid}"},
+    "request": {"package_version": "npm://lodash@4.17.15", "target_version": "4.17.21"}
+  }'
 ```
-Filter: spec.finding_categories contains FINDING_CATEGORY_SAST and spec.target_source_code_version.path contains "auth.js"
+
+### Get package score from OSS namespace
+```bash
+endorctl api list --resource Metric -n oss \
+  --filter "meta.name==package_version_scorecard and meta.parent_uuid=={package_uuid}"
 ```
+
+## Error Handling
+
+- **Invalid filter syntax**: Show the correct syntax with examples
+- **Resource not found**: Verify the resource type and namespace
+- **Permission denied**: Check namespace access
+- **Auth error**: Suggest `/endor-setup`
+- **Rate limited**: Wait and retry, or reduce page size
+
+## Safety Notes
+
+- This skill only executes read operations (list/get) by default
+- Create/update/delete operations require explicit user confirmation
+- Never pass sensitive data in filter strings that might be logged

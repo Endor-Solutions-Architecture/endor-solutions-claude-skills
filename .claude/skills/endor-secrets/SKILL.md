@@ -1,152 +1,120 @@
 ---
 name: endor-secrets
-description: Scan for exposed secrets, credentials, API keys, and sensitive data in your codebase
+description: |
+  Scan for exposed secrets, credentials, API keys, and sensitive data in your codebase. Detects hardcoded passwords, tokens, private keys, and more.
+  - MANDATORY TRIGGERS: endor secrets, scan secrets, find secrets, exposed credentials, hardcoded secrets, api keys exposed, endor-secrets, find credentials, secret scan
 ---
 
-# Endor Labs: Secrets Scanner
+# Endor Labs Secrets Scanner
 
-Scan for exposed secrets, credentials, API keys, and sensitive data in your codebase.
+Scan your codebase for exposed secrets, credentials, and sensitive data.
 
-## Arguments
+## Prerequisites
 
-$ARGUMENTS - Optional: specific file path, directory, or "all" for full scan
+- Endor Labs MCP server configured (run `/endor-setup` if not)
 
-## Instructions
-
-### Determine Scan Scope
-
-1. If file path provided → scan that specific file
-2. If directory provided → scan that directory
-3. If "all" or no argument → scan entire repository
-
-### Execute Secrets Scan
-
-**Option 1: Using opengrep with secrets rules**
-```json
-{
-  "path": "/path/to/scan",
-  "ruleset": "secrets"
-}
-```
-
-**Option 2: Using full repository scan**
-```json
-{
-  "path": "/path/to/repo"
-}
-```
-Then filter findings: `spec.finding_categories contains FINDING_CATEGORY_SECRETS`
-
-### Secret Types to Identify
+## Secret Types Detected
 
 | Type | Pattern | Risk |
 |------|---------|------|
 | AWS Access Key | `AKIA[0-9A-Z]{16}` | Cloud compromise |
 | AWS Secret Key | 40-char base64 | Cloud compromise |
-| GitHub Token | `ghp_`, `gho_`, etc. | Repo access |
+| GitHub Token | `ghp_`, `gho_`, `ghu_`, `ghs_`, `ghr_` | Repo access |
+| GitLab Token | `glpat-` | Repo access |
+| Slack Token | `xox[baprs]-` | Workspace access |
+| Stripe Key | `sk_live_`, `pk_live_`, `sk_test_` | Payment data |
+| Google API Key | `AIza[0-9A-Za-z-_]{35}` | Service abuse |
 | Private Key | `-----BEGIN.*PRIVATE KEY-----` | Auth bypass |
-| Database URL | `postgres://`, `mysql://` with creds | Data breach |
-| API Key | Various `_key`, `_token` patterns | Service abuse |
-| JWT Secret | Context-based | Auth bypass |
-| Password | `password\s*=` assignments | Account takeover |
+| Database URL | Connection strings with creds | Data breach |
+| JWT Secret | `jwt_secret`, `JWT_KEY` patterns | Token forging |
+| NPM Token | `npm_` | Package publish |
+| PyPI Token | `pypi-` | Package publish |
 
-### Present Results
+## Workflow
+
+### Step 1: Run Secrets Scan
+
+Use the `endor-labs-cli` MCP tool with secrets ruleset:
+
+- `path`: Current working directory (or user-specified path/file)
+- `ruleset`: secrets
+
+If the MCP tool is not available, check for secrets findings from a previous scan:
+
+Use `get_security_findings` with filter:
+```
+spec.finding_categories contains FINDING_CATEGORY_SECRETS
+```
+
+### Step 2: Present Results
 
 ```markdown
 ## Secrets Scan Results
 
-**Scope:** {path}
-**Files Scanned:** {count}
+**Path:** {scanned path}
+**Secrets Found:** {count}
 
-### Exposed Secrets Found ({count})
+### Exposed Secrets
 
-#### 1. AWS Access Key
-- **File:** config/aws.js:12
-- **Type:** AWS Access Key ID
-- **Risk:** CRITICAL - Could allow full AWS account access
-- **Value:** `AKIA...` (partially redacted)
+| # | Type | File | Line | Risk |
+|---|------|------|------|------|
+| 1 | AWS Access Key | config/aws.js | 15 | Critical - Cloud compromise |
+| 2 | Database Password | .env | 3 | Critical - Data breach |
+| 3 | GitHub Token | scripts/deploy.sh | 42 | High - Repo access |
 
-**Remediation:**
-1. Rotate this key immediately in AWS IAM
-2. Replace with environment variable:
-   ```javascript
-   const accessKey = process.env.AWS_ACCESS_KEY_ID;
+### Detail: {Secret #1}
+
+**File:** {file_path}:{line}
+**Type:** {secret_type}
+**Risk:** {risk_description}
+
+**Immediate Actions:**
+1. **Rotate this secret immediately** - Generate a new key/token and revoke the old one
+2. **Remove from code** - Replace with environment variable reference
+3. **Check git history** - The secret may be in previous commits
+
+**Secure Alternative:**
+```{language}
+// Before (INSECURE)
+const awsKey = "AKIA...";
+
+// After (SECURE)
+const awsKey = process.env.AWS_ACCESS_KEY_ID;
+```
+
+### Recommendations
+
+1. **Rotate all exposed secrets immediately**
+2. **Add sensitive files to .gitignore:**
    ```
-3. Add to `.gitignore`: `*.env`
-
-#### 2. Database Password
-- **File:** docker-compose.yml:25
-- **Type:** Hardcoded password
-- **Risk:** HIGH - Database compromise
-
-**Remediation:**
-1. Use Docker secrets or environment variables
-2. Replace:
-   ```yaml
-   environment:
-     - POSTGRES_PASSWORD=${DB_PASSWORD}
+   .env
+   .env.local
+   *.pem
+   *.key
+   credentials.json
+   ```
+3. **Use environment variables** for all secrets
+4. **Use a secrets manager** (AWS Secrets Manager, HashiCorp Vault, etc.)
+5. **Check git history** for previously committed secrets:
+   ```bash
+   git log --all --full-history -- "*.env"
    ```
 
-### Files to Add to .gitignore
+### Next Steps
 
-```
-.env
-.env.*
-*.pem
-*.key
-credentials.json
-secrets.yaml
+1. **Rotate secrets** listed above
+2. **Run full scan:** `/endor-scan` to check for other issues
+3. **Pre-PR check:** `/endor-review` before pushing changes
 ```
 
-### Immediate Actions Required
+## Immediate Alert Format
 
-1. **Rotate all exposed secrets** - assume they are compromised
-2. **Check git history** - secrets may exist in previous commits
-3. **Use git-filter-repo** to remove secrets from history if needed
-4. **Enable secret scanning** in your repository settings
+If secrets are found, present them with urgency:
 
-### Git History Warning
+> **SECRETS DETECTED** - {count} exposed credentials found. These should be rotated immediately as they may already be compromised if committed to version control.
 
-If these files were previously committed, the secrets exist in git history.
-To fully remove:
-```bash
-# Remove from history (USE WITH CAUTION)
-git filter-repo --invert-paths --path config/aws.js
+## Error Handling
 
-# Or use BFG Repo-Cleaner
-bfg --delete-files config/aws.js
-```
-```
-
-### If No Secrets Found
-
-```markdown
-## Secrets Scan Results
-
-**Scope:** {path}
-**Status:** No secrets detected
-
-Your codebase appears clean of hardcoded secrets.
-
-### Best Practices Reminder
-
-- Use environment variables for all secrets
-- Use a secrets manager (AWS Secrets Manager, HashiCorp Vault, etc.)
-- Add `.env` files to `.gitignore`
-- Enable GitHub secret scanning
-- Run secrets scans in CI/CD pipeline
-```
-
-### Integration with CI/CD
-
-Suggest adding secrets scanning to CI pipeline:
-
-```yaml
-# GitHub Actions example
-- name: Scan for secrets
-  run: |
-    endorctl scan --secrets-only --path .
-
-# Or with Endor Labs GitHub App
-# Secrets scanning is automatic on every PR
-```
+- **No secrets found**: Good news. Confirm the scan completed and suggest periodic re-scanning.
+- **Auth error**: Suggest `/endor-setup`
+- **MCP not available**: Suggest running `/endor-setup` to configure

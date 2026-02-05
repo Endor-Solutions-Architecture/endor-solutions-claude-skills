@@ -92,7 +92,7 @@ This rule activates when you:
    ```
 
 4. **Run Secrets Scan After Writing**
-   - Use `opengrep` MCP tool with secrets rules
+   - Use `endor-labs-cli` MCP tool with secrets rules
    - Or run `scan_repository` to check for exposed secrets
 
 ## Environment File Handling
@@ -119,7 +119,7 @@ SECRET_KEY=abc123realkey456
 After writing files, proactively scan:
 
 ```
-Use opengrep MCP tool with:
+Use endor-labs-cli MCP tool with:
 - ruleset: "secrets"
 - path: path to file or directory
 ```

@@ -1,292 +1,182 @@
 ---
 name: endor-sbom
-description: Manage Software Bill of Materials (SBOM) - export, import, analyze, and compare
+description: |
+  Manage Software Bill of Materials (SBOM) - export, import, analyze, and compare SBOMs. Supports CycloneDX and SPDX formats.
+  - MANDATORY TRIGGERS: endor sbom, software bill of materials, sbom export, sbom import, sbom analyze, sbom compare, endor-sbom, generate sbom
 ---
 
-# Endor Labs: SBOM Management
+# Endor Labs SBOM Management
 
-Manage Software Bill of Materials (SBOM) - export, import, analyze, and compare SBOMs.
+Manage Software Bill of Materials - export, import, analyze, and compare.
 
-## Arguments
+## Prerequisites
 
-$ARGUMENTS - Action and options: `export`, `import`, `analyze`, `compare`, `validate`
+- Endor Labs MCP server configured (run `/endor-setup` if not)
+- `endorctl` CLI installed for export/import operations
 
-## Instructions
+## Supported Actions
 
-### Parse Arguments
+| Action | Description |
+|--------|-------------|
+| `export` | Generate SBOM from current project |
+| `import` | Import and analyze an external SBOM |
+| `analyze` | Analyze project's component inventory |
+| `compare` | Compare two SBOMs for drift detection |
+| `validate` | Check SBOM format compliance |
 
-| Argument | Action |
-|----------|--------|
-| `export` | Export SBOM from a project |
-| `export cyclonedx` | Export in CycloneDX format |
-| `export spdx` | Export in SPDX format |
-| `import <file>` | Import an SBOM file |
-| `analyze` | Analyze current project's SBOM |
-| `compare <sbom1> <sbom2>` | Compare two SBOMs |
-| `validate <file>` | Validate SBOM format |
-| No argument | Show SBOM summary for current project |
+## Workflow
 
-### Export SBOM
+### Action: Export
 
-Use endorctl CLI for SBOM export:
+#### Step 1: Get Project UUID
+
+Use `get_repository_uuid` or `projects_by_name` MCP tool to find the project.
+
+If the project hasn't been scanned yet, suggest running `/endor-scan` first.
+
+#### Step 2: Export SBOM
 
 ```bash
-# Get project UUID first
-endorctl api list --resource Project --filter "meta.name==project-name"
+# CycloneDX format (recommended)
+endorctl sbom export --project-uuid {uuid} --format cyclonedx --output sbom-cyclonedx.json
 
-# Export CycloneDX (default)
-endorctl sbom export --project-uuid {uuid} --format cyclonedx --output sbom.json
-
-# Export SPDX
-endorctl sbom export --project-uuid {uuid} --format spdx --output sbom.spdx.json
+# SPDX format
+endorctl sbom export --project-uuid {uuid} --format spdx --output sbom-spdx.json
 ```
 
-**Present export options:**
-```markdown
-## SBOM Export
+#### Step 3: Present Summary
 
+```markdown
+## SBOM Export Complete
+
+**Format:** {CycloneDX/SPDX}
+**File:** {output_path}
 **Project:** {project_name}
-**Available Formats:**
 
-| Format | File | Use Case |
-|--------|------|----------|
-| CycloneDX 1.5 | sbom.cdx.json | Industry standard, vulnerability tracking |
-| SPDX 2.3 | sbom.spdx.json | License compliance, legal requirements |
+### Component Summary
 
-**Command to export:**
-```bash
-endorctl sbom export --project-uuid {uuid} --format cyclonedx --output sbom.cdx.json
+| Type | Count |
+|------|-------|
+| Libraries | {n} |
+| Frameworks | {n} |
+| Applications | {n} |
+| Total Components | {n} |
+
+### Top-Level Dependencies
+
+| Package | Version | License |
+|---------|---------|---------|
+| {pkg1} | {v1} | MIT |
+| {pkg2} | {v2} | Apache-2.0 |
+
+### Compliance
+
+| Requirement | Status |
+|-------------|--------|
+| NTIA Minimum Elements | {Pass/Fail} |
+| Component names | {Pass/Fail} |
+| Component versions | {Pass/Fail} |
+| Unique identifiers | {Pass/Fail} |
+| Dependency relationships | {Pass/Fail} |
+| Author information | {Pass/Fail} |
+| Timestamp | {Pass/Fail} |
 ```
 
-**Include in build pipeline:**
-```yaml
-- name: Generate SBOM
-  run: endorctl sbom export --project-uuid $PROJECT_UUID --format cyclonedx --output sbom.json
+### Action: Analyze
 
-- name: Upload SBOM artifact
-  uses: actions/upload-artifact@v4
-  with:
-    name: sbom
-    path: sbom.json
-```
-```
+Analyze the current project's component inventory:
 
-### Import SBOM
-
-```bash
-# Import and analyze an external SBOM
-endorctl sbom import --file sbom.json --namespace $ENDOR_NAMESPACE
-```
-
-**After import, analyze for vulnerabilities:**
-```markdown
-## SBOM Import Results
-
-**File:** {filename}
-**Format:** {detected_format}
-**Components:** {count}
-
-### Vulnerability Analysis
-
-After importing, I'll scan the SBOM components for known vulnerabilities.
-
-| Component | Version | Vulnerabilities | Severity |
-|-----------|---------|-----------------|----------|
-| lodash | 4.17.15 | 3 | CRITICAL |
-| axios | 0.21.0 | 1 | HIGH |
-| express | 4.17.1 | 0 | - |
-
-### License Summary
-
-| License | Count | Risk |
-|---------|-------|------|
-| MIT | 45 | Low |
-| Apache-2.0 | 23 | Low |
-| GPL-3.0 | 2 | High (copyleft) |
-```
-
-### Analyze SBOM
-
-Query the project's dependency information:
-
-1. Use `get_security_findings` to get vulnerability data
-2. Use API to get package-versions for the project
-3. Compile component inventory
+1. Run `/endor-scan` if not already scanned
+2. Query findings and dependencies
+3. Present component breakdown with vulnerability and license status
 
 ```markdown
 ## SBOM Analysis
 
-**Project:** {project_name}
-**Total Components:** {count}
-**Direct Dependencies:** {direct_count}
-**Transitive Dependencies:** {transitive_count}
+### Component Inventory
 
-### Component Breakdown by Language
+| Category | Count | With Vulns | License Risk |
+|----------|-------|------------|--------------|
+| Direct dependencies | {n} | {n} | {n} |
+| Transitive dependencies | {n} | {n} | {n} |
+| Dev dependencies | {n} | {n} | {n} |
 
-| Language | Components | Percentage |
-|----------|------------|------------|
-| JavaScript | 156 | 62% |
-| Python | 45 | 18% |
-| Go | 50 | 20% |
+### Vulnerability Coverage
 
-### Security Status
-
-| Severity | Vulnerable Components |
-|----------|----------------------|
-| Critical | 2 |
-| High | 5 |
-| Medium | 12 |
-| Low | 8 |
-
-### Top Risk Components
-
-| Component | Version | Issues | Risk Score |
-|-----------|---------|--------|------------|
-| lodash | 4.17.15 | 3 CVEs | 9.8 |
-| minimist | 1.2.5 | 1 CVE | 7.5 |
+- **Components with known CVEs:** {n}/{total}
+- **Critical/High CVEs:** {n}
+- **Reachable CVEs:** {n}
 
 ### License Distribution
 
-| License | Count | Commercial Use |
-|---------|-------|----------------|
-| MIT | 89 | Allowed |
-| Apache-2.0 | 45 | Allowed |
-| ISC | 12 | Allowed |
-| GPL-3.0 | 2 | Restricted |
-
-### Recommendations
-
-1. Update lodash to 4.17.21 to fix critical vulnerabilities
-2. Review GPL-3.0 components for license compliance
-3. Consider generating SBOM for compliance requirements
+| License | Count | Risk |
+|---------|-------|------|
+| MIT | {n} | Low |
+| Apache-2.0 | {n} | Low |
+| GPL-3.0 | {n} | High |
 ```
 
-### Compare SBOMs
+### Action: Compare
 
-Compare two SBOMs to identify differences (useful for tracking changes):
+Compare two SBOMs for drift detection:
 
 ```markdown
 ## SBOM Comparison
 
-**Baseline:** sbom-v1.0.json ({date})
-**Current:** sbom-v1.1.json ({date})
+**Base:** {sbom1_name}
+**Current:** {sbom2_name}
 
-### Summary
+### Changes
 
-| Metric | Baseline | Current | Change |
-|--------|----------|---------|--------|
-| Total Components | 145 | 152 | +7 |
-| Direct Dependencies | 25 | 27 | +2 |
-| Vulnerabilities | 8 | 3 | -5 |
+| Change | Package | Base Version | Current Version |
+|--------|---------|-------------|-----------------|
+| Added | {pkg} | - | {v} |
+| Removed | {pkg} | {v} | - |
+| Updated | {pkg} | {v_old} | {v_new} |
 
-### Added Components
+### Security Impact
 
-| Component | Version | License | Vulnerabilities |
-|-----------|---------|---------|-----------------|
-| zod | 3.22.0 | MIT | 0 |
-| @tanstack/query | 5.0.0 | MIT | 0 |
+- **New vulnerabilities introduced:** {n}
+- **Vulnerabilities resolved:** {n}
+- **Net change:** {+/-n}
 
-### Removed Components
+### License Impact
 
-| Component | Version | Reason |
-|-----------|---------|--------|
-| moment | 2.29.1 | Replaced with date-fns |
-
-### Updated Components
-
-| Component | Old Version | New Version | CVEs Fixed |
-|-----------|-------------|-------------|------------|
-| lodash | 4.17.15 | 4.17.21 | 3 |
-| axios | 0.21.0 | 1.6.0 | 1 |
-
-### New Vulnerabilities
-
-None introduced.
-
-### Fixed Vulnerabilities
-
-| CVE | Component | Severity |
-|-----|-----------|----------|
-| CVE-2021-23337 | lodash | CRITICAL |
-| CVE-2020-8203 | lodash | HIGH |
+- **New license risks:** {n}
+- **License risks resolved:** {n}
 ```
 
-### Validate SBOM
+### Action: Validate
 
-Check if an SBOM file is valid and complete:
+Validate an SBOM file against compliance standards:
 
 ```markdown
-## SBOM Validation Results
+## SBOM Validation
 
-**File:** {filename}
-**Format:** CycloneDX 1.5
-**Status:** Valid
+**File:** {path}
+**Format:** {detected format}
+**Valid:** {yes/no}
 
-### Validation Checks
+### Compliance Checks
 
-| Check | Status | Notes |
-|-------|--------|-------|
-| Schema Valid | ✅ Pass | Conforms to CycloneDX 1.5 |
-| Required Fields | ✅ Pass | All required fields present |
-| Component Names | ✅ Pass | All components have valid names |
-| Version Format | ✅ Pass | Versions follow semver |
-| License Info | ⚠️ Partial | 12 components missing license |
-| PURL Format | ✅ Pass | Package URLs are valid |
-| Hash Integrity | ✅ Pass | SHA-256 hashes present |
-
-### Missing Information
-
-**Components without license data:**
-- custom-internal-lib@1.0.0
-- legacy-module@2.3.4
-- ...
-
-### Recommendations
-
-1. Add license information to internal components
-2. Consider adding supplier information for compliance
-3. Include vulnerability data for NTIA minimum elements
+| Check | Status | Details |
+|-------|--------|---------|
+| Format validity | {Pass/Fail} | {details} |
+| NTIA minimum elements | {Pass/Fail} | {details} |
+| Component completeness | {Pass/Fail} | {details} |
+| Dependency relationships | {Pass/Fail} | {details} |
 ```
 
-## SBOM Compliance Standards
+## Next Steps
 
-### NTIA Minimum Elements
-- Supplier Name
-- Component Name
-- Version
-- Unique Identifier
-- Dependency Relationship
-- Author of SBOM Data
-- Timestamp
+Always end with relevant next steps:
 
-### Executive Order 14028 Requirements
-- Machine-readable format (CycloneDX or SPDX)
-- Generated at build time
-- Include all dependencies (direct and transitive)
-- Signed or integrity-verified
+1. **Scan for vulnerabilities:** `/endor-scan`
+2. **Check license compliance:** `/endor-license`
+3. **Generate CI/CD pipeline:** `/endor-cicd` to automate SBOM generation
 
-## Integration Examples
+## Error Handling
 
-### GitHub Actions
-```yaml
-- name: Generate SBOM
-  run: |
-    endorctl scan --path . --output-type sbom
-
-- name: Upload to Dependency Graph
-  uses: actions/upload-artifact@v4
-  with:
-    name: sbom
-    path: sbom.cdx.json
-```
-
-### GitLab CI
-```yaml
-sbom:
-  stage: build
-  script:
-    - endorctl sbom export --format cyclonedx --output sbom.json
-  artifacts:
-    paths:
-      - sbom.json
-```
+- **Project not found**: Run `/endor-scan` first to register the project
+- **Auth error**: Suggest `/endor-setup`
+- **Invalid SBOM format**: Show the validation errors and suggest corrections

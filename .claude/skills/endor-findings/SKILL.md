@@ -1,201 +1,110 @@
 ---
 name: endor-findings
-description: Display security findings from the Endor Labs platform
+description: |
+  Display security findings from the Endor Labs platform. Supports filtering by severity, reachability, category, and more.
+  - MANDATORY TRIGGERS: endor findings, show findings, list findings, show vulnerabilities, list vulnerabilities, security findings, endor-findings
 ---
 
-# Endor Labs: Show Findings
+# Endor Labs Findings Viewer
 
-Display and filter security findings from the Endor Labs platform.
+Query and display security findings with filtering support.
 
-## Arguments
+## Prerequisites
 
-$ARGUMENTS - Optional filters: `critical`, `high`, `reachable`, `sast`, `secrets`, `license`, `container`, `all`
+- Endor Labs MCP server configured (run `/endor-setup` if not)
+- A scan has been run previously (findings are stored on the platform)
 
-Multiple filters can be combined: `/endor-findings critical reachable`
+## Filter Reference
 
-## Instructions
+Parse the user's input to build filters. Common filter keywords:
 
-### Parse Filter Arguments
-
-| Argument | Filter Applied |
-|----------|---------------|
+| User Says | API Filter |
+|-----------|-----------|
 | `critical` | `spec.level==FINDING_LEVEL_CRITICAL` |
 | `high` | `spec.level==FINDING_LEVEL_HIGH` |
 | `medium` | `spec.level==FINDING_LEVEL_MEDIUM` |
+| `low` | `spec.level==FINDING_LEVEL_LOW` |
 | `reachable` | `spec.finding_tags contains FINDING_TAGS_REACHABLE_FUNCTION` |
 | `unreachable` | `spec.finding_tags not contains FINDING_TAGS_REACHABLE_FUNCTION` |
+| `vulnerability`, `vuln` | `spec.finding_categories contains FINDING_CATEGORY_VULNERABILITY` |
 | `sast` | `spec.finding_categories contains FINDING_CATEGORY_SAST` |
-| `secrets` | `spec.finding_categories contains FINDING_CATEGORY_SECRETS` |
-| `vulns` | `spec.finding_categories contains FINDING_CATEGORY_VULNERABILITY` |
+| `secrets`, `secret` | `spec.finding_categories contains FINDING_CATEGORY_SECRETS` |
 | `license` | `spec.finding_categories contains FINDING_CATEGORY_LICENSE_RISK` |
-| `container` | `spec.finding_categories contains FINDING_CATEGORY_CONTAINER` |
-| `no-test` | `spec.finding_tags not contains FINDING_TAGS_TEST_DEPENDENCY` |
-| `all` | No filter (show everything) |
-| (none) | Show summary + critical reachable details |
+| `no-test`, `exclude test` | `spec.finding_tags not contains FINDING_TAGS_TEST_DEPENDENCY` |
 
-### Build Filter String
+### Combining Filters
 
-Combine multiple filters with ` and `:
-```
-spec.level==FINDING_LEVEL_CRITICAL and spec.finding_tags contains FINDING_TAGS_REACHABLE_FUNCTION
-```
+Multiple filters are combined with `and`. For example:
 
-### Call API
+- `critical reachable` -> `spec.level==FINDING_LEVEL_CRITICAL and spec.finding_tags contains FINDING_TAGS_REACHABLE_FUNCTION`
+- `high vulnerability no-test` -> `spec.level==FINDING_LEVEL_HIGH and spec.finding_categories contains FINDING_CATEGORY_VULNERABILITY and spec.finding_tags not contains FINDING_TAGS_TEST_DEPENDENCY`
 
-Use `get_security_findings` MCP tool with the constructed filter.
+## Workflow
 
-### Present Results
+### Step 1: Build Filter
 
-**Default View (no arguments):**
+Parse user input and construct the API filter string. If no filters specified, default to:
+
+- Critical and High severity
+- Excluding test dependencies
+
+### Step 2: Query Findings
+
+Use the `get_security_findings` MCP tool:
+
+- `filter`: Constructed filter string
+- `page_size`: 20 (default, adjustable)
+
+### Step 3: Present Results
+
 ```markdown
-## Security Findings Summary
+## Security Findings
 
-**Namespace:** {namespace}
-**Last Updated:** {timestamp}
-
-### Overview
-
-| Category | Critical | High | Medium | Low | Total |
-|----------|----------|------|--------|-----|-------|
-| Vulnerabilities | 2 (1 reachable) | 5 | 12 | 8 | 27 |
-| SAST | 1 | 3 | 8 | 15 | 27 |
-| Secrets | 1 | 0 | 0 | 0 | 1 |
-| License | 0 | 2 | 0 | 0 | 2 |
-
-### Priority: Critical + Reachable ({count})
-
-These need immediate attention - they're exploitable in your code.
-
-| Finding | Package/File | CVE/Rule | Description |
-|---------|-------------|----------|-------------|
-| Prototype Pollution | lodash@4.17.15 | CVE-2021-23337 | Reachable via src/utils.js:42 |
-| SQL Injection | src/api/db.js:45 | CWE-89 | User input flows to query |
-
-### Quick Actions
-
-| Action | Command |
-|--------|---------|
-| Fix critical issues | `/endor-fix` |
-| See all critical | `/endor-findings critical` |
-| See only reachable | `/endor-findings reachable` |
-| Deep dive on CVE | `/endor-explain CVE-XXXX` |
-```
-
-**Filtered View:**
-```markdown
-## Security Findings: {filter_description}
-
-**Filter:** {raw_filter}
-**Results:** {count} findings
+**Filter:** {human-readable filter description}
+**Total:** {count} findings
 
 ### Findings
 
-| # | Type | Finding | Severity | Details |
-|---|------|---------|----------|---------|
-| 1 | Vulnerability | CVE-2021-23337 in lodash@4.17.15 | CRITICAL | Prototype Pollution |
-| 2 | Vulnerability | CVE-2021-3749 in axios@0.21.0 | HIGH | SSRF |
-| 3 | SAST | SQL Injection in db.js:45 | CRITICAL | CWE-89 |
+| # | Severity | Category | Package | CVE/Issue | Reachable | Description |
+|---|----------|----------|---------|-----------|-----------|-------------|
+| 1 | Critical | Vuln | {pkg} | {cve} | Yes | {desc} |
+| 2 | High | SAST | {file} | {rule} | N/A | {desc} |
+| 3 | High | Vuln | {pkg} | {cve} | No | {desc} |
 
-### Finding Details
+### Summary
 
-#### 1. CVE-2021-23337 (lodash)
-- **Severity:** CRITICAL
-- **Reachable:** Yes - called from `src/utils/data.js:42`
-- **Description:** Prototype Pollution vulnerability in set/setWith functions
-- **Fix:** Upgrade to lodash@4.17.21
-
----
+- {n} Critical ({r} reachable)
+- {n} High ({r} reachable)
+- {n} Secrets
+- {n} SAST issues
+- {n} License risks
 
 ### Next Steps
 
-1. **Fix these issues:** `/endor-fix`
-2. **Get more details:** `/endor-explain CVE-2021-23337`
-3. **Refine search:** `/endor-findings critical reachable no-test`
+1. **Fix top issue:** `/endor-fix {top-cve}`
+2. **Explain a finding:** `/endor-explain {cve}`
+3. **Narrow results:** `/endor-findings critical reachable`
+4. **View SAST details:** `/endor-findings sast`
 ```
 
-**No Results:**
-```markdown
-## No Findings Match Your Filter
+### Step 4: Pagination
 
-**Filter applied:** {filter}
+If more results are available, inform the user and offer to show the next page.
 
-This could mean:
-1. Great news - no issues match this filter!
-2. The project hasn't been scanned yet
-3. The filter is too restrictive
+## Priority Order
 
-### Try These Alternatives
+Always present findings in this priority:
 
-| To See | Command |
-|--------|---------|
-| All findings | `/endor-findings all` |
-| Just critical | `/endor-findings critical` |
-| All vulnerabilities | `/endor-findings vulns` |
-| Run a new scan | `/endor-scan` |
-```
+1. Critical + Reachable
+2. High + Reachable
+3. Secrets/Credentials
+4. Critical + Unreachable
+5. SAST Critical/High
+6. License issues
+7. Medium/Low
 
 ## Error Handling
 
-### No Project Found
-```markdown
-## No Findings Available
-
-No security findings found for this namespace. This usually means:
-
-1. **Project not scanned yet** - Run `/endor-scan` first
-2. **Wrong namespace** - Check `echo $ENDOR_NAMESPACE`
-3. **No issues** - Your project might be clean!
-
-**To scan now:**
-```
-/endor-scan
-```
-```
-
-### Authentication Error
-```markdown
-## Authentication Required
-
-Can't retrieve findings - please authenticate first.
-
-```bash
-endorctl init
-```
-
-Or run `/endor-setup` for guided setup.
-```
-
-### Invalid Filter
-```markdown
-## Invalid Filter
-
-The filter `{filter}` isn't recognized.
-
-**Valid filters:**
-- Severity: `critical`, `high`, `medium`, `low`
-- Type: `vulns`, `sast`, `secrets`, `license`, `container`
-- Reachability: `reachable`, `unreachable`
-- Scope: `no-test`, `all`
-
-**Examples:**
-```
-/endor-findings critical reachable
-/endor-findings sast high
-/endor-findings secrets
-```
-```
-
-## Filter Combinations
-
-### Common Useful Filters
-
-| Use Case | Command |
-|----------|---------|
-| Exploitable now | `/endor-findings critical reachable` |
-| All critical | `/endor-findings critical` |
-| Production issues only | `/endor-findings critical no-test` |
-| Code vulnerabilities | `/endor-findings sast` |
-| Credential leaks | `/endor-findings secrets` |
-| License problems | `/endor-findings license` |
-| Container issues | `/endor-findings container` |
-| Everything | `/endor-findings all` |
+- **No findings**: Could mean no scan has been run. Suggest `/endor-scan`.
+- **Auth error**: Suggest `/endor-setup`
+- **Filter syntax error**: Show the user the correct filter format

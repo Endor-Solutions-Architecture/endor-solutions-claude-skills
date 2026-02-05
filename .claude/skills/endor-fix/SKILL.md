@@ -1,115 +1,129 @@
 ---
 name: endor-fix
-description: Help remediate security vulnerabilities by finding safe upgrade paths
+description: |
+  Help remediate security vulnerabilities by finding safe upgrade paths. Provides step-by-step fix instructions and can apply fixes automatically.
+  - MANDATORY TRIGGERS: endor fix, fix vulnerability, fix cve, remediate, how to fix, patch vulnerability, endor-fix, upgrade fix
 ---
 
-# Endor Labs: Fix Vulnerabilities
+# Endor Labs Remediation Guide
 
-Help remediate security vulnerabilities by finding safe upgrade paths.
+Help users fix security vulnerabilities by finding safe upgrade paths and providing step-by-step remediation.
 
-## Arguments
+## Prerequisites
 
-$ARGUMENTS - Optional: specific CVE ID, package name, or "all" for critical issues
+- Endor Labs MCP server configured (run `/endor-setup` if not)
 
-## Instructions
+## Input Parsing
 
-### If specific CVE provided (e.g., "CVE-2021-23337"):
+The user can provide:
 
-1. Call `get_security_findings` with filter:
-   `spec.finding_metadata.vulnerability.spec.aliases contains CVE-2021-23337`
+1. **CVE ID** - e.g., `CVE-2021-23337`
+2. **Package name** - e.g., `lodash`
+3. **Finding UUID** - from `/endor-findings` output
 
-2. Extract the affected package and version
+## Workflow
 
-3. Call `get_dependency_upgrade_opts` for that package
+### Step 1: Identify the Vulnerability
 
-4. Present the fix:
+If the user provided a CVE ID:
+1. Use `get_endor_vulnerability` MCP tool to get CVE details
+2. Use `get_security_findings` to find affected projects
+
+If the user provided a package name:
+1. Use `check_dependency_for_vulnerabilities` to get all CVEs
+2. Prioritize by severity and reachability
+
+If the user provided a finding UUID:
+1. Use `retrieve_single_finding` to get details
+
+### Step 2: Find Safe Upgrade Path
+
+Use the `get_dependency_upgrade_opts` MCP tool:
+
+- `dependency`: Affected package name
+- `language`: Package language/ecosystem
+
+This returns available versions with vulnerability status.
+
+### Step 3: Determine Fix Strategy
+
+Evaluate the best fix approach:
+
+1. **Patch upgrade** (e.g., 4.17.15 -> 4.17.21) - Preferred, lowest risk
+2. **Minor upgrade** (e.g., 4.17.x -> 4.18.x) - Low risk, may have new features
+3. **Major upgrade** (e.g., 4.x -> 5.x) - Higher risk, may have breaking changes
+
+### Step 4: Present Remediation
+
 ```markdown
-## Fix for CVE-2021-23337
+## Remediation: {CVE-ID}
 
-**Package:** lodash
-**Current Version:** 4.17.15
-**Vulnerability:** Prototype Pollution
+### Vulnerability
 
-### Safe Versions
-- **4.17.21** (recommended) - Fixes this CVE and 2 others
-- 4.17.20 - Fixes this CVE only
+| Field | Value |
+|-------|-------|
+| CVE | {cve_id} |
+| Severity | {severity} |
+| Package | {package}@{current_version} |
+| Description | {description} |
+| Reachable | {yes/no} |
 
-### How to Fix
+### Fix
 
-**npm:**
-```bash
-npm install lodash@4.17.21
-```
+**Recommended upgrade:** {package}@{current} -> {package}@{safe_version}
 
-**yarn:**
-```bash
-yarn add lodash@4.17.21
-```
-
-**package.json:**
-```json
-"dependencies": {
-  "lodash": "^4.17.21"
-}
-```
-
-### Verify
-After updating, run `/endor scan` to confirm the fix.
-```
-
-### If package name provided (e.g., "lodash"):
-
-1. Call `get_security_findings` filtering for that package
-2. List all vulnerabilities affecting it
-3. Call `get_dependency_upgrade_opts` to find the version that fixes all issues
-4. Present comprehensive upgrade path
-
-### If "all" or no argument:
-
-1. Call `get_security_findings` with:
-   `spec.level==FINDING_LEVEL_CRITICAL and spec.finding_tags contains FINDING_TAGS_REACHABLE_FUNCTION`
-
-2. Group findings by package
-
-3. For each package, call `get_dependency_upgrade_opts`
-
-4. Present a remediation plan:
-```markdown
-## Remediation Plan
-
-### Priority 1: Critical Reachable (Fix Immediately)
-
-#### lodash (4.17.15 → 4.17.21)
-- Fixes: CVE-2021-23337, CVE-2020-8203
-- Risk: Prototype pollution, actively exploitable
-- Command: `npm install lodash@4.17.21`
-
-#### axios (0.21.0 → 1.6.0)
-- Fixes: CVE-2021-3749
-- Risk: SSRF vulnerability
-- Command: `npm install axios@1.6.0`
-
-### Bulk Fix Script
+**Upgrade type:** {Patch/Minor/Major}
 
 ```bash
-npm install lodash@4.17.21 axios@1.6.0
+# npm
+npm install {package}@{safe_version}
+
+# yarn
+yarn add {package}@{safe_version}
+
+# pip
+pip install {package}=={safe_version}
+
+# go
+go get {package}@v{safe_version}
 ```
 
-### After Fixing
-1. Run your test suite
-2. Run `/endor scan` to verify
-3. Commit changes with message: "fix: remediate critical vulnerabilities"
+### All Safe Versions
+
+| Version | Type | Vulnerabilities | Notes |
+|---------|------|-----------------|-------|
+| {v1} | Patch | 0 | Recommended |
+| {v2} | Minor | 0 | New features |
+| {v3} | Major | 0 | Breaking changes possible |
+
+### Additional Fixes Needed
+
+{If multiple CVEs affect this package, list them all and whether the recommended version fixes them}
+
+### Next Steps
+
+1. **Check upgrade impact:** `/endor-upgrade {package} {safe_version}`
+2. **Verify fix:** `/endor-check {package} {safe_version}`
+3. **Run scan:** `/endor-scan` to verify all issues resolved
 ```
 
-### Breaking Changes Warning
+### Step 5: Offer to Apply Fix
 
-If an upgrade involves a major version change:
-```markdown
-**Warning:** axios 0.21.0 → 1.6.0 is a major version upgrade.
+Ask the user if they want you to apply the fix:
 
-Breaking changes to review:
-- Response structure changed
-- Some config options renamed
+1. Update the dependency in the manifest file
+2. Run the package manager install command
+3. Verify the fix with `/endor-check`
 
-Consider: Test thoroughly or use axios@0.27.2 for a minor upgrade path.
-```
+## Data Source Priority
+
+1. MCP tools (preferred): `get_dependency_upgrade_opts`, `get_security_findings`
+2. API calls: VersionUpgradeService endpoints
+3. CLI fallback: `endorctl recommend dependency-upgrades`
+4. **NEVER search the internet for upgrade recommendations**
+
+## Error Handling
+
+- **No fix available**: Some vulnerabilities have no patched version. Suggest mitigation strategies (WAF rules, input validation, etc.)
+- **Package not found**: Check package name and ecosystem
+- **Auth error**: Suggest `/endor-setup`

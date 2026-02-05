@@ -202,7 +202,7 @@ SafeClass obj = mapper.readValue(userInput, SafeClass.class);
 
 1. **Run SAST scan on the modified file:**
    ```
-   Use opengrep MCP tool with:
+   Use endor-labs-cli MCP tool with:
    - path: path to the modified file
    - (default rulesets will be applied)
    ```
@@ -246,7 +246,7 @@ SafeClass obj = mapper.readValue(userInput, SafeClass.class);
 After significant code changes, automatically check for SAST issues:
 
 ```
-1. Use opengrep tool for quick file-level scan
+1. Use endor-labs-cli tool for quick file-level scan
 2. Use get_security_findings with filter:
    spec.finding_categories contains FINDING_CATEGORY_SAST
 3. For findings, use sast_context to get detailed context

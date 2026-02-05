@@ -1,302 +1,187 @@
 ---
 name: endor-review
-description: Analyze the current git diff or branch for security issues before creating a PR
+description: |
+  Analyze the current git diff or branch for security issues before creating a PR. Performs dependency checks, SAST analysis, secrets detection, and license compliance review.
+  - MANDATORY TRIGGERS: endor review, pre-pr review, security review, review changes, ready to merge, pre-merge check, endor-review, review before pr, security gate
 ---
 
-# Endor Labs: PR Security Review
+# Endor Labs Pre-PR Security Review
 
-Analyze the current git diff or branch for security issues before creating a PR.
+Comprehensive security review of your changes before creating a pull request.
 
-## Arguments
+## Prerequisites
 
-$ARGUMENTS - Optional: `--branch <name>`, `--base <branch>`, `--full`, `--quick`
+- Endor Labs MCP server configured (run `/endor-setup` if not)
+- Git repository with uncommitted or committed changes
 
-## Instructions
+## Workflow
 
-### Determine Scope
+### Step 1: Gather Changes
 
-1. **Default (no args):** Review uncommitted changes + commits not in base branch
-2. **--branch <name>:** Review specific branch vs main
-3. **--base <branch>:** Compare against specific base branch
-4. **--full:** Full security scan of changed files
-5. **--quick:** Fast scan, skip deep analysis
-
-### Step 1: Get the Diff
+Identify what has changed:
 
 ```bash
-# Get changed files
-git diff --name-only HEAD origin/main
+# Get changed files (staged + unstaged)
+git diff --name-only HEAD
 
-# Get the actual diff
-git diff origin/main...HEAD
-
-# For uncommitted changes
+# Get diff for analysis
 git diff HEAD
+
+# If comparing branches
+git diff main...HEAD --name-only
 ```
 
-### Step 2: Analyze Changes
+Categorize changed files:
+- **Dependency files**: package.json, go.mod, requirements.txt, pom.xml, etc.
+- **Source code files**: .js, .ts, .py, .go, .java, etc.
+- **Config files**: .env, docker-compose.yml, Dockerfile, etc.
+- **CI/CD files**: .github/workflows/*, Jenkinsfile, etc.
 
-**For each changed file, check:**
+### Step 2: Dependency Check
 
-1. **Dependency Changes** (package.json, go.mod, requirements.txt, etc.)
-   - New dependencies added?
-   - Version changes?
-   - Use `check_dependency_for_vulnerabilities` for each
+If any dependency manifest files were modified:
 
-2. **Code Changes**
-   - Security-sensitive patterns?
-   - Use `opengrep` for SAST on changed files
+1. Parse the diff to find new or updated packages
+2. For each new/updated package, use `check_dependency_for_vulnerabilities` MCP tool
+3. Report any vulnerabilities found
 
-3. **Configuration Changes**
-   - Secrets exposed?
-   - Security settings modified?
+### Step 3: SAST Analysis
 
-4. **Infrastructure Changes** (Terraform, Dockerfile, k8s manifests)
-   - Security misconfigurations?
+For all modified source code files:
 
-### Step 3: Present Review Results
+1. Use the `endor-labs-cli` MCP tool on each changed file
+2. Report any security findings
+3. Use `sast_context` for detailed code context on findings
+
+### Step 4: Secrets Detection
+
+Scan all changed files for secrets:
+
+1. Use the `endor-labs-cli` MCP tool with secrets ruleset on changed files
+2. Also manually check for common secret patterns in the diff
+3. Flag any exposed credentials
+
+### Step 5: License Check
+
+For new dependencies:
+
+1. Check license of each new dependency
+2. Flag copyleft licenses (GPL, AGPL)
+3. Warn on unknown licenses
+
+### Step 6: Container Security (if applicable)
+
+If Dockerfile or docker-compose files were modified:
+
+1. Check for security best practices
+2. Flag running as root, latest tags, exposed ports
+3. Check for secrets in build args
+
+### Step 7: Present Security Review
 
 ```markdown
-## PR Security Review
+## Pre-PR Security Review
 
-**Branch:** feature/user-auth
-**Base:** main
-**Changed Files:** 15
-**Commits:** 3
-
----
-
-### Dependency Analysis
-
-#### New Dependencies Added
-
-| Package | Version | Vulnerabilities | Endor Score | Recommendation |
-|---------|---------|-----------------|-------------|----------------|
-| jsonwebtoken | 9.0.0 | 0 | 85/100 | Safe to use |
-| bcrypt | 5.1.0 | 0 | 92/100 | Recommended |
-
-#### Updated Dependencies
-
-| Package | Old | New | CVEs Fixed | Breaking Changes |
-|---------|-----|-----|------------|------------------|
-| lodash | 4.17.15 | 4.17.21 | 3 | None |
-
-#### Removed Dependencies
-
-| Package | Note |
-|---------|------|
-| moment | Replaced with date-fns |
+**Branch:** {current_branch}
+**Files Changed:** {count}
+**Dependency Files Modified:** {yes/no}
 
 ---
 
-### SAST Findings
+### 1. Dependency Check {PASS/WARN/BLOCK}
 
-#### Critical Issues (Block Merge)
+{If dependencies changed:}
 
-##### SQL Injection Risk - src/api/users.js:45
+| Package | Change | Version | Vulnerabilities | Status |
+|---------|--------|---------|-----------------|--------|
+| {pkg} | Added | {v} | 0 | PASS |
+| {pkg} | Updated | {old}->{new} | 2 (1 Critical) | BLOCK |
 
-```javascript
-// Line 45
-const query = `SELECT * FROM users WHERE id = ${req.params.id}`;
+{If no dependency changes:}
+No dependency files modified.
+
+---
+
+### 2. SAST Analysis {PASS/WARN/BLOCK}
+
+| File | Issues | Severity | Details |
+|------|--------|----------|---------|
+| {file} | 1 | Critical | SQL Injection at line {n} |
+| {file} | 2 | Medium | Information disclosure |
+
+{If no issues:}
+No SAST issues found in modified files.
+
+---
+
+### 3. Secrets Scan {PASS/BLOCK}
+
+{If secrets found:}
+**SECRETS DETECTED** - {count} exposed credentials found
+
+| Type | File | Line |
+|------|------|------|
+| API Key | {file} | {line} |
+
+{If clean:}
+No secrets detected in changes.
+
+---
+
+### 4. License Check {PASS/WARN/BLOCK}
+
+{If new dependencies:}
+
+| Package | License | Risk |
+|---------|---------|------|
+| {pkg} | MIT | Low |
+| {pkg} | GPL-3.0 | High |
+
+{If no new dependencies:}
+No new dependencies added.
+
+---
+
+### Verdict: {PASS / WARN / BLOCK}
+
+{Based on findings:}
 ```
 
-**Risk:** User input directly interpolated into SQL query.
+### Security Gate Criteria
 
-**Fix:**
-```javascript
-const query = 'SELECT * FROM users WHERE id = ?';
-db.query(query, [req.params.id]);
-```
+**BLOCK** (must fix before merging):
+- Any critical vulnerability in new/updated dependencies
+- Any critical SAST finding (SQL injection, command injection)
+- Any exposed secrets
+- AGPL/SSPL licensed new dependencies in commercial projects
 
----
+**WARN** (review recommended):
+- High severity vulnerabilities (non-reachable)
+- Medium/Low SAST findings
+- GPL dependencies (review with legal)
 
-#### High Issues
+**PASS** (safe to merge):
+- No critical issues
+- No secrets
+- No blocking license issues
 
-##### Potential XSS - src/components/Profile.jsx:89
+### Step 8: Provide Actionable Fixes
 
-```jsx
-<div dangerouslySetInnerHTML={{__html: user.bio}} />
-```
-
-**Risk:** User-controlled HTML rendered without sanitization.
-
-**Fix:**
-```jsx
-import DOMPurify from 'dompurify';
-<div dangerouslySetInnerHTML={{__html: DOMPurify.sanitize(user.bio)}} />
-```
-
----
-
-### Secrets Detection
-
-| File | Type | Line | Status |
-|------|------|------|--------|
-| .env.example | Example values | - | OK |
-
-No real secrets detected.
-
----
-
-### Configuration Changes
-
-#### Dockerfile Modified
-
-```diff
-- FROM node:16-alpine
-+ FROM node:20-alpine
-```
-
-**Analysis:** Base image update - good security practice.
-
-#### Security Headers Added
-
-```diff
-+ app.use(helmet());
-+ app.use(cors({ origin: allowedOrigins }));
-```
-
-**Analysis:** Security improvement.
-
----
-
-### Infrastructure Analysis
-
-No Terraform/Kubernetes changes detected.
-
----
-
-## Summary
-
-| Category | Critical | High | Medium | Low |
-|----------|----------|------|--------|-----|
-| Vulnerabilities | 0 | 0 | 0 | 0 |
-| SAST | 1 | 1 | 2 | 3 |
-| Secrets | 0 | 0 | 0 | 0 |
-| Config | 0 | 0 | 0 | 0 |
-
-### Verdict
-
-**BLOCK** - 1 critical SAST issue must be resolved before merge.
-
-### Required Actions
-
-1. Fix SQL injection in `src/api/users.js:45`
-2. Consider fixing XSS in `src/components/Profile.jsx:89`
-
-### Recommended Actions
-
-1. Add input validation for user parameters
-2. Consider adding rate limiting to auth endpoints
-
----
-
-Would you like me to help fix these issues?
-```
-
-### Quick Review Mode
-
-For `--quick` flag, perform fast checks only:
+For each blocking issue, provide a specific fix:
 
 ```markdown
-## Quick PR Security Review
+### Required Fixes Before Merge
 
-**Branch:** feature/user-auth
-**Files Changed:** 15
+1. **{Issue}** in {file}:{line}
+   - **Fix:** {specific remediation}
+   - **Command:** `/endor-fix {cve}` for details
 
-### Dependency Check
-- 2 new dependencies: All safe
-- 1 updated: lodash 4.17.15 → 4.17.21 (3 CVEs fixed)
-
-### Quick SAST
-- 1 potential SQL injection
-- 1 potential XSS
-
-### Secrets Scan
-- No secrets detected
-
-**Quick Verdict:** Review needed - 2 potential issues found.
-
-Run `/endor-review --full` for detailed analysis.
+2. **{Issue}** in {file}:{line}
+   - **Fix:** {specific remediation}
 ```
 
-### Integration with Git Workflow
+## Error Handling
 
-**Pre-commit hook suggestion:**
-```bash
-#!/bin/bash
-# .git/hooks/pre-commit
-
-echo "Running Endor Labs security check..."
-endorctl scan --path . --quick --changed-only
-
-if [ $? -ne 0 ]; then
-    echo "Security issues found. Please fix before committing."
-    exit 1
-fi
-```
-
-**Pre-push hook suggestion:**
-```bash
-#!/bin/bash
-# .git/hooks/pre-push
-
-echo "Running full security review..."
-endorctl scan --path . --output-type summary
-
-# Check for critical issues
-CRITICAL=$(endorctl scan --path . --output-type json | jq '[.findings[] | select(.level == "CRITICAL")] | length')
-if [ "$CRITICAL" -gt 0 ]; then
-    echo "Critical security issues found. Push blocked."
-    exit 1
-fi
-```
-
-### Automatic PR Comment
-
-When integrated with GitHub/GitLab, generate a PR comment:
-
-```markdown
-## Endor Labs Security Review
-
-| Check | Status | Details |
-|-------|--------|---------|
-| Vulnerabilities | ✅ Pass | No new vulnerabilities |
-| SAST | ⚠️ Warning | 2 issues found |
-| Secrets | ✅ Pass | No secrets detected |
-| License | ✅ Pass | All licenses compliant |
-
-### Findings
-
-<details>
-<summary>SAST Issues (2)</summary>
-
-- **HIGH** SQL Injection in `src/api/users.js:45`
-- **MEDIUM** Missing input validation in `src/api/auth.js:23`
-
-</details>
-
-### Dependency Changes
-
-- ➕ Added `jsonwebtoken@9.0.0` - Safe
-- ⬆️ Updated `lodash` 4.17.15 → 4.17.21 - 3 CVEs fixed
-
----
-*Powered by [Endor Labs](https://endorlabs.com)*
-```
-
-### Review Checklist
-
-At the end of review, provide a checklist:
-
-```markdown
-## Pre-Merge Checklist
-
-- [ ] All critical SAST issues resolved
-- [ ] All high-severity vulnerabilities addressed
-- [ ] No secrets in code
-- [ ] New dependencies reviewed for security
-- [ ] License compliance verified
-- [ ] Security tests pass
-- [ ] Code review completed
-```
+- **No changes detected**: Tell the user there are no changes to review
+- **Auth error**: Suggest `/endor-setup`
+- **MCP not available**: Perform manual pattern-based review of the diff

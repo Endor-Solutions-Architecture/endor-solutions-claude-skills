@@ -1,387 +1,228 @@
 ---
 name: endor-container
-description: Scan container images for vulnerabilities, misconfigurations, and compliance issues
+description: |
+  Scan container images for vulnerabilities, misconfigurations, and compliance issues. Analyze Dockerfiles and docker-compose files for security best practices.
+  - MANDATORY TRIGGERS: endor container, container scan, docker scan, dockerfile scan, docker security, container security, endor-container, scan image, docker compose security
 ---
 
-# Endor Labs: Container Security
+# Endor Labs Container Security Scanner
 
-Scan container images for vulnerabilities, misconfigurations, and compliance issues.
+Scan container images and analyze Dockerfiles for security issues.
 
-## Arguments
+## Prerequisites
 
-$ARGUMENTS - Image reference or action: `<image:tag>`, `scan`, `registry`, `dockerfile`
+- Endor Labs MCP server configured (run `/endor-setup` if not)
+- Docker installed (for image scanning)
 
-## Instructions
+## Capabilities
 
-### Parse Arguments
+| Feature | Description |
+|---------|-------------|
+| Dockerfile Analysis | Security best practices review |
+| Docker Compose Analysis | Configuration security check |
+| Image Scanning | OS and application vulnerability scan |
+| Base Image Recommendations | Suggest safer base images |
 
-| Argument | Action |
-|----------|--------|
-| `<image:tag>` | Scan specific image |
-| `scan` | Scan image from current Dockerfile |
-| `registry` | Scan images from connected registry |
-| `dockerfile` | Analyze Dockerfile for issues |
-| `sbom` | Generate container SBOM |
-| No argument | Detect and scan local images |
-
-### Scan Container Image
-
-Use endorctl container commands:
-
-```bash
-# Scan a specific image
-endorctl container scan --image nginx:1.25
-
-# Scan from registry
-endorctl container scan --image ghcr.io/org/app:latest
-
-# Scan with SBOM output
-endorctl container scan --image app:latest --sbom-output sbom.json
-```
-
-### Present Scan Results
-
-```markdown
-## Container Security Scan
-
-**Image:** nginx:1.25-alpine
-**Digest:** sha256:abc123...
-**Size:** 42.5 MB
-**Created:** 2024-01-15
-
----
-
-### Summary
-
-| Category | Critical | High | Medium | Low |
-|----------|----------|------|--------|-----|
-| OS Vulnerabilities | 0 | 2 | 8 | 15 |
-| App Dependencies | 1 | 3 | 5 | 10 |
-| Misconfigurations | 0 | 1 | 2 | 0 |
-| Secrets | 0 | 0 | 0 | 0 |
-
-**Overall Risk:** ⚠️ HIGH (6 high+ severity issues)
-
----
-
-### Base Image Analysis
-
-| Property | Value | Assessment |
-|----------|-------|------------|
-| Base Image | alpine:3.18 | Up to date |
-| OS | Alpine Linux 3.18 | Supported |
-| Last Updated | 30 days ago | Recent |
-| Size | 7.8 MB | Minimal |
-
-**Recommendation:** Base image is current. Consider `alpine:3.19` for latest patches.
-
----
-
-### OS Vulnerabilities (25)
-
-#### Critical (0)
-None found.
-
-#### High (2)
-
-| CVE | Package | Installed | Fixed | Description |
-|-----|---------|-----------|-------|-------------|
-| CVE-2024-1234 | openssl | 3.1.0-r1 | 3.1.0-r4 | Buffer overflow |
-| CVE-2024-5678 | curl | 8.4.0-r0 | 8.5.0-r0 | HSTS bypass |
-
-**Fix:** Update base image or run:
-```dockerfile
-RUN apk upgrade --no-cache openssl curl
-```
-
----
-
-### Application Dependencies (19)
-
-Detected package manager: npm (node_modules)
-
-#### Critical (1)
-
-| Package | Version | CVE | Severity | Fixed In |
-|---------|---------|-----|----------|----------|
-| lodash | 4.17.15 | CVE-2021-23337 | CRITICAL | 4.17.21 |
-
-#### High (3)
-
-| Package | Version | CVE | Fixed In |
-|---------|---------|-----|----------|
-| axios | 0.21.0 | CVE-2021-3749 | 0.21.1 |
-| minimist | 1.2.5 | CVE-2021-44906 | 1.2.6 |
-| node-fetch | 2.6.0 | CVE-2022-0235 | 2.6.7 |
-
----
-
-### Misconfigurations (3)
-
-#### High (1)
-
-**Running as root**
-```dockerfile
-# Current (insecure)
-USER root
-
-# Recommended
-USER nginx
-```
-
-#### Medium (2)
-
-**No health check defined**
-```dockerfile
-# Add health check
-HEALTHCHECK --interval=30s --timeout=3s \
-  CMD wget -q --spider http://localhost/ || exit 1
-```
-
-**Sensitive port exposed**
-```dockerfile
-# Current
-EXPOSE 22
-
-# Remove SSH if not needed
-# EXPOSE 22
-```
-
----
-
-### Secrets Detection
-
-No secrets detected in image layers.
-
-**Checked:**
-- Environment variables
-- Configuration files
-- Image history/layers
-- Embedded credentials
-
----
-
-### Image Layers Analysis
-
-| Layer | Size | Command | Issues |
-|-------|------|---------|--------|
-| 1 | 7.8 MB | FROM alpine:3.18 | 0 |
-| 2 | 2.1 MB | RUN apk add nginx | 0 |
-| 3 | 32 MB | COPY node_modules | 4 vulns |
-| 4 | 0.5 MB | COPY app | 0 |
-
-**Largest layer:** Layer 3 (node_modules) - consider multi-stage build
-
----
-
-### Recommendations
-
-1. **Immediate:** Update lodash to fix critical CVE
-2. **High Priority:** Update base image packages
-3. **Security:** Run as non-root user
-4. **Best Practice:** Add health check
-5. **Optimization:** Use multi-stage build to reduce size
-
----
-
-### Remediated Dockerfile
-
-```dockerfile
-# Multi-stage build
-FROM node:20-alpine AS builder
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-
-FROM alpine:3.19
-RUN apk add --no-cache nginx && \
-    adduser -D -H -s /sbin/nologin appuser
-
-COPY --from=builder /app/node_modules ./node_modules
-COPY --chown=appuser:appuser . .
-
-USER appuser
-EXPOSE 80
-
-HEALTHCHECK --interval=30s --timeout=3s \
-  CMD wget -q --spider http://localhost/ || exit 1
-
-CMD ["nginx", "-g", "daemon off;"]
-```
-```
+## Workflow
 
 ### Dockerfile Analysis
 
-Analyze Dockerfile without building:
+#### Step 1: Find and Read Dockerfiles
+
+Look for Dockerfiles in the project:
+- `Dockerfile`
+- `Dockerfile.*` (e.g., Dockerfile.prod, Dockerfile.dev)
+- `docker/Dockerfile`
+- `*.dockerfile`
+
+#### Step 2: Analyze for Security Issues
+
+Check for these issues:
+
+**Critical Issues:**
+
+| Issue | Pattern | Fix |
+|-------|---------|-----|
+| Running as root | No `USER` directive | Add `USER nonroot` |
+| Using `:latest` tag | `FROM image:latest` | Use specific version tag |
+| Secrets in build args | `ARG PASSWORD=...` | Use runtime secrets |
+| Sensitive data in COPY | Copying `.env`, keys | Use `.dockerignore` |
+
+**High Issues:**
+
+| Issue | Pattern | Fix |
+|-------|---------|-----|
+| No health check | Missing `HEALTHCHECK` | Add health check directive |
+| Exposed sensitive ports | `EXPOSE 22` (SSH) | Remove unnecessary ports |
+| Using ADD for URLs | `ADD http://...` | Use `COPY` + `curl` |
+
+**Medium Issues:**
+
+| Issue | Pattern | Fix |
+|-------|---------|-----|
+| Package cache not cleaned | `apt-get install` without cleanup | Add `rm -rf /var/lib/apt/lists/*` |
+| Multiple RUN commands | Many separate `RUN` lines | Combine with `&&` |
+| No `.dockerignore` | Missing file | Create `.dockerignore` |
+| Using ADD instead of COPY | `ADD` for local files | Use `COPY` |
+
+#### Step 3: Present Dockerfile Analysis
 
 ```markdown
-## Dockerfile Analysis
+## Dockerfile Security Analysis
 
-**File:** Dockerfile
-**Lines:** 25
-
----
+**File:** {dockerfile_path}
+**Base Image:** {base_image}
 
 ### Issues Found
 
-#### High Severity
+**Critical:**
+- Line {n}: Using `:latest` tag - use specific version (e.g., `node:20-alpine`)
+- No `USER` directive - container runs as root
 
-**1. Using `latest` tag (line 1)**
-```dockerfile
-FROM node:latest
-```
-**Issue:** Non-deterministic builds, security unpredictable
-**Fix:** `FROM node:20-alpine`
+**High:**
+- No `HEALTHCHECK` defined
+- Line {n}: Exposed port 22 (SSH) - remove unless required
 
-**2. Running as root (no USER directive)**
-**Issue:** Container runs with root privileges
-**Fix:** Add `USER node` or create non-root user
+**Medium:**
+- Line {n}: Package cache not cleaned after install
+- Lines {n}-{m}: Multiple `RUN` commands can be combined
+- No `.dockerignore` file found
 
----
+### Secure Dockerfile
 
-#### Medium Severity
-
-**3. Package manager cache not cleaned (line 8)**
-```dockerfile
-RUN apt-get update && apt-get install -y curl
-```
-**Issue:** Cache increases image size, stale packages
-**Fix:**
-```dockerfile
-RUN apt-get update && apt-get install -y curl \
-    && rm -rf /var/lib/apt/lists/*
-```
-
-**4. Multiple RUN commands (lines 5-12)**
-**Issue:** Creates unnecessary layers
-**Fix:** Combine into single RUN
-
----
-
-#### Low Severity
-
-**5. No .dockerignore file**
-**Issue:** May copy unnecessary files
-**Fix:** Create `.dockerignore`:
-```
-node_modules
-.git
-*.md
-.env
-```
-
----
-
-### Best Practices Checklist
-
-| Practice | Status |
-|----------|--------|
-| Specific base image tag | ❌ Using :latest |
-| Non-root user | ❌ Not configured |
-| Multi-stage build | ❌ Not used |
-| Minimal base image | ⚠️ Could use alpine |
-| Layer optimization | ⚠️ Multiple RUN commands |
-| No secrets in build | ✅ None detected |
-| Health check | ❌ Not defined |
-| Security scanning | ⚠️ Not in CI |
-
----
-
-### Optimized Dockerfile
+Here's a secured version:
 
 ```dockerfile
-# syntax=docker/dockerfile:1
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production && npm cache clean --force
-
+# Use specific version with minimal base
 FROM node:20-alpine
 
-# Security: non-root user
+# Create non-root user
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
+# Set working directory
 WORKDIR /app
-COPY --from=builder --chown=appuser:appuser /app/node_modules ./node_modules
-COPY --chown=appuser:appuser . .
 
+# Copy dependency files first (for layer caching)
+COPY --chown=appuser:appgroup package*.json ./
+RUN npm ci --only=production && \
+    npm cache clean --force
+
+# Copy application code
+COPY --chown=appuser:appgroup . .
+
+# Switch to non-root user
 USER appuser
-EXPOSE 3000
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD node healthcheck.js || exit 1
+# Add health check
+HEALTHCHECK --interval=30s --timeout=3s \
+  CMD wget -q --spider http://localhost:3000/health || exit 1
+
+EXPOSE 3000
 
 CMD ["node", "server.js"]
 ```
+
+### Checklist
+
+- [ ] Use specific base image tag
+- [ ] Create and use non-root user
+- [ ] Add health check
+- [ ] Clean package manager cache
+- [ ] Use multi-stage build for smaller images
+- [ ] Add `.dockerignore`
+- [ ] Use `COPY` instead of `ADD`
+- [ ] No secrets in build args or env
 ```
 
-### Registry Scan
+### Docker Compose Analysis
+
+#### Step 1: Find and Read Compose Files
+
+Look for:
+- `docker-compose.yml`
+- `docker-compose.*.yml`
+- `compose.yml`
+- `compose.*.yml`
+
+#### Step 2: Analyze Security
+
+Check for these issues:
+
+| Issue | Pattern | Fix |
+|-------|---------|-----|
+| Privileged mode | `privileged: true` | Remove or use specific capabilities |
+| Host network | `network_mode: host` | Use bridge network |
+| Docker socket mount | `/var/run/docker.sock` | Remove unless required |
+| Sensitive env vars | `PASSWORD=xxx` in env | Use Docker secrets |
+| No resource limits | Missing `deploy.resources` | Add CPU/memory limits |
+| Ports on 0.0.0.0 | `ports: "3000:3000"` | Use `127.0.0.1:3000:3000` |
+
+#### Step 3: Present Compose Analysis
 
 ```markdown
-## Container Registry Scan
+## Docker Compose Security Analysis
 
-**Registry:** ghcr.io/myorg
-**Images Scanned:** 15
-**Scan Date:** {date}
+**File:** {compose_path}
 
----
+### Issues Found
 
-### Summary by Repository
+| # | Service | Issue | Risk | Fix |
+|---|---------|-------|------|-----|
+| 1 | app | Privileged mode enabled | Critical | Remove `privileged: true` |
+| 2 | db | Password in environment | High | Use Docker secrets |
+| 3 | app | No resource limits | Medium | Add memory/CPU limits |
+| 4 | app | Port exposed to 0.0.0.0 | Medium | Bind to 127.0.0.1 |
 
-| Repository | Images | Critical | High | Medium |
-|------------|--------|----------|------|--------|
-| myorg/api | 5 | 2 | 8 | 15 |
-| myorg/web | 3 | 0 | 3 | 10 |
-| myorg/worker | 4 | 1 | 5 | 8 |
-| myorg/tools | 3 | 0 | 2 | 5 |
+### Secure Docker Compose
 
----
+```yaml
+version: '3.8'
+services:
+  app:
+    image: app:1.0.0
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    secrets:
+      - db_password
+    ports:
+      - "127.0.0.1:3000:3000"
 
-### Critical Findings
-
-| Image | Tag | CVE | Package | Fixed |
-|-------|-----|-----|---------|-------|
-| api | v1.2.3 | CVE-2021-23337 | lodash | 4.17.21 |
-| api | v1.2.2 | CVE-2021-23337 | lodash | 4.17.21 |
-| worker | latest | CVE-2024-1234 | openssl | 3.1.0-r4 |
-
----
-
-### Recommendations
-
-1. Rebuild `api:v1.2.3` with updated dependencies
-2. Update `worker:latest` base image
-3. Remove deprecated tags older than 90 days
-4. Enable automatic scanning in registry settings
+secrets:
+  db_password:
+    external: true
+```
 ```
 
-### Generate Container SBOM
+### Image Scanning
+
+If the user wants to scan a built image:
 
 ```bash
-endorctl container scan --image app:latest --sbom-output container-sbom.json --sbom-format cyclonedx
+# Scan with endorctl
+endorctl scan --image {image_name}:{tag} --output-type summary
 ```
 
-```markdown
-## Container SBOM Generated
+Present results similar to `/endor-scan` output.
 
-**Image:** app:latest
-**Format:** CycloneDX 1.5
-**File:** container-sbom.json
+## Next Steps
 
-### Contents
+1. **Apply fixes** to your Dockerfiles
+2. **Run full scan:** `/endor-scan` for application-level vulnerabilities
+3. **Add to CI/CD:** `/endor-cicd` for automated container scanning
+4. **Set policies:** `/endor-policy` to enforce container security standards
 
-| Category | Count |
-|----------|-------|
-| OS Packages | 45 |
-| Application Dependencies | 156 |
-| System Libraries | 23 |
-| **Total Components** | 224 |
+## Error Handling
 
-### Use Cases
-
-- Supply chain compliance
-- Vulnerability tracking
-- License compliance
-- Incident response
-```
+- **No Dockerfile found**: Ask user for the path or if they want to create one
+- **Docker not installed**: Can still analyze Dockerfiles statically
+- **Auth error**: Suggest `/endor-setup`

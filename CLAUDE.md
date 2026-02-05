@@ -122,7 +122,7 @@ These rules run automatically when relevant files are modified:
 
 ### Scanning
 - `scan_repository` - Full repository security scan
-- `opengrep` - SAST scanning with Semgrep rules
+- `endor-labs-cli` - SAST scanning with Endor Labs MCP Server
 
 ### Vulnerability Analysis
 - `check_dependency_for_vulnerabilities` - Check package for CVEs

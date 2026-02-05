@@ -1,243 +1,145 @@
 ---
 name: endor-score
-description: View Endor Labs health scores for open source packages
+description: |
+  View Endor Labs health scores for open source packages. Evaluates activity, popularity, security, and quality to help you choose safe dependencies.
+  - MANDATORY TRIGGERS: endor score, package score, package health, should I use, evaluate package, endor-score, is this package safe, package quality
 ---
 
-# Endor Labs: Package Health Scores
+# Endor Labs Package Score
 
-View Endor Labs health scores for open source packages - evaluate packages before adding them as dependencies.
+Evaluate open source package health before adoption using Endor Labs scoring.
 
-## Arguments
+## Prerequisites
 
-$ARGUMENTS - Package name with optional version: `lodash`, `lodash@4.17.21`, `npm:lodash`, `pypi:requests`
+- Endor Labs MCP server configured (run `/endor-setup` if not)
 
-## Instructions
+## Input Parsing
 
-### Parse Package Input
+Parse the user's input to extract:
 
-| Input | Interpretation |
-|-------|----------------|
-| `lodash` | Detect language from context, get latest |
-| `lodash@4.17.21` | Specific version |
-| `npm:lodash` | Explicit npm package |
-| `pypi:requests` | Explicit PyPI package |
-| `go:github.com/gin-gonic/gin` | Go module |
-| `maven:com.google.guava:guava` | Maven artifact |
+1. **Package name** (required) - e.g., `lodash`, `express`, `django`
+2. **Version** (optional) - specific version to evaluate
+3. **Compare with** (optional) - another package for comparison
 
-### Get Package Scores
+## Workflow
 
-**Step 1: Find the PackageVersion in OSS namespace**
+### Step 1: Get Package Information
+
+Query the OSS namespace for the package:
 
 ```
 GET /v1/namespaces/oss/package-versions
-Filter: meta.name==npm://lodash@4.17.21
+Filter: meta.name=={ecosystem}://{package}@{version}
 ```
 
-**Step 2: Get the Scorecard Metric**
+### Step 2: Get Package Metrics
+
+Query metrics for the package:
 
 ```
 GET /v1/namespaces/oss/metrics
 Filter: meta.name==package_version_scorecard and meta.parent_uuid=={package_uuid}
 ```
 
-### Endor Scores Explained
-
-| Score | Description | Weight |
-|-------|-------------|--------|
-| **Activity** | Commit frequency, release cadence, contributor activity | 25% |
-| **Popularity** | Downloads, stars, forks, dependents | 25% |
-| **Security** | Vulnerabilities, security practices, OSSF scorecard | 30% |
-| **Code Quality** | Test coverage, code smells, documentation | 20% |
-
-### Present Results
+### Step 3: Present Scores
 
 ```markdown
-## Package Health Report: lodash
+## Package Health: {package}@{version}
 
-**Package:** lodash
-**Version:** 4.17.21 (latest)
-**Ecosystem:** npm
-**License:** MIT
+### Overall Score: {score}/10
 
----
+| Category | Score | Details |
+|----------|-------|---------|
+| Activity | {n}/10 | {commit frequency, last release, contributor count} |
+| Popularity | {n}/10 | {downloads, stars, dependents} |
+| Security | {n}/10 | {CVE count, security practices, OSSF scorecard} |
+| Quality | {n}/10 | {tests, docs, type support} |
 
-### Endor Score: 78/100
+### Score Breakdown
 
-```
-Overall    [████████████████░░░░] 78/100
-           ├─ Activity  [████████████████████] 95/100
-           ├─ Popularity [████████████████████] 98/100
-           ├─ Security   [████████████░░░░░░░░] 62/100
-           └─ Quality    [██████████████░░░░░░] 72/100
-```
+#### Activity ({score}/10)
+- Last commit: {date}
+- Release frequency: {cadence}
+- Active contributors: {count}
+- Issue response time: {time}
 
----
+#### Popularity ({score}/10)
+- Weekly downloads: {count}
+- GitHub stars: {count}
+- Dependent packages: {count}
 
-### Activity Score: 95/100
+#### Security ({score}/10)
+- Known CVEs: {count} ({critical}, {high}, {medium}, {low})
+- OpenSSF Scorecard: {score}
+- Signed releases: {yes/no}
+- Security policy: {yes/no}
 
-| Metric | Value | Assessment |
-|--------|-------|------------|
-| Last Commit | 2 weeks ago | Active |
-| Commits (90d) | 45 | High activity |
-| Contributors | 312 | Large community |
-| Release Frequency | Monthly | Regular |
-| Issue Response Time | 2 days | Responsive |
+#### Quality ({score}/10)
+- Test coverage: {available/not available}
+- Documentation: {quality}
+- TypeScript types: {bundled/DefinitelyTyped/none}
+- License: {license}
 
-**Assessment:** Actively maintained with regular updates.
+### Vulnerability History
 
----
-
-### Popularity Score: 98/100
-
-| Metric | Value | Assessment |
-|--------|-------|------------|
-| Weekly Downloads | 45M | Extremely popular |
-| GitHub Stars | 58k | Well-known |
-| Dependents | 150k+ | Widely used |
-| Forks | 7k | Community interest |
-
-**Assessment:** Industry-standard utility library.
-
----
-
-### Security Score: 62/100
-
-| Metric | Value | Assessment |
-|--------|-------|------------|
-| Known Vulnerabilities | 0 (in latest) | Clean |
-| Historical CVEs | 5 | Some past issues |
-| Security Policy | Yes | Has SECURITY.md |
-| Signed Releases | No | Not signed |
-| 2FA Enforced | Unknown | - |
-| OSSF Scorecard | 6.5/10 | Average |
-
-**Assessment:** No current vulnerabilities, but has had past security issues. Consider the specific version carefully.
-
-**Historical Vulnerabilities:**
-| CVE | Severity | Fixed In |
-|-----|----------|----------|
-| CVE-2021-23337 | CRITICAL | 4.17.21 |
-| CVE-2020-8203 | HIGH | 4.17.19 |
-| CVE-2019-10744 | HIGH | 4.17.12 |
-
----
-
-### Code Quality Score: 72/100
-
-| Metric | Value | Assessment |
-|--------|-------|------------|
-| Test Coverage | 85% | Good |
-| Documentation | Excellent | Full API docs |
-| TypeScript Support | Yes | @types/lodash |
-| Bundle Size | 69.9 kB | Consider alternatives |
-| Tree Shaking | Limited | lodash-es better |
-
-**Assessment:** Well-documented with good test coverage. Consider `lodash-es` for better tree-shaking.
-
----
+| CVE | Severity | Fixed In | Date |
+|-----|----------|----------|------|
+| {cve} | {severity} | {version} | {date} |
 
 ### Recommendation
 
-**Verdict:** ✅ **Safe to use** (with version 4.17.21+)
+{Based on scores:}
 
-**Considerations:**
-1. Always use version 4.17.21 or later to avoid known CVEs
-2. Consider `lodash-es` for ES modules and better tree-shaking
-3. For specific functions, consider individual imports: `lodash.debounce`
+- **Score >= 8**: Recommended for production use
+- **Score 6-7**: Acceptable, monitor for issues
+- **Score 4-5**: Use with caution, consider alternatives
+- **Score < 4**: Not recommended, find alternatives
+```
 
----
+### Step 4: Version Comparison (if requested)
 
-### Alternatives
+If the user asks to compare versions:
 
-| Package | Score | Size | Notes |
-|---------|-------|------|-------|
-| lodash-es | 80/100 | 69 kB | ES module version |
-| underscore | 72/100 | 16 kB | Lighter, less features |
-| ramda | 75/100 | 46 kB | Functional style |
-| Native JS | - | 0 | Modern JS has many built-ins |
-
----
-
+```markdown
 ### Version Comparison
 
-| Version | Score | Vulnerabilities | Recommendation |
-|---------|-------|-----------------|----------------|
-| 4.17.21 | 78 | 0 | ✅ Use this |
-| 4.17.20 | 72 | 1 HIGH | ⚠️ Upgrade |
-| 4.17.15 | 55 | 3 CRITICAL | ❌ Don't use |
-| 3.10.1 | 40 | 5+ | ❌ Outdated |
+| Metric | {v1} | {v2} |
+|--------|------|------|
+| CVEs | {n} | {n} |
+| Score | {n}/10 | {n}/10 |
+| Release Date | {date} | {date} |
 ```
 
-### Compare Multiple Packages
+### Step 5: Package Comparison (if requested)
 
-When user asks to compare packages:
+If the user asks to compare packages:
 
 ```markdown
-## Package Comparison
+### Package Comparison: {pkg1} vs {pkg2}
 
-Comparing alternatives for: HTTP client library
+| Metric | {pkg1} | {pkg2} |
+|--------|--------|--------|
+| Overall Score | {n}/10 | {n}/10 |
+| Activity | {n}/10 | {n}/10 |
+| Popularity | {n}/10 | {n}/10 |
+| Security | {n}/10 | {n}/10 |
+| Quality | {n}/10 | {n}/10 |
+| Known CVEs | {n} | {n} |
+| License | {lic} | {lic} |
 
-| Metric | axios | node-fetch | got | ky |
-|--------|-------|------------|-----|-----|
-| **Endor Score** | 75 | 72 | 82 | 78 |
-| Activity | 70 | 65 | 90 | 85 |
-| Popularity | 95 | 88 | 75 | 60 |
-| Security | 65 | 70 | 85 | 80 |
-| Quality | 70 | 65 | 78 | 87 |
-| **Size** | 13 kB | 3 kB | 48 kB | 7 kB |
-| **Vulnerabilities** | 1 | 0 | 0 | 0 |
-| **TypeScript** | Built-in | @types | Built-in | Built-in |
-| **Browser Support** | Yes | No | No | Yes |
-
-### Recommendation
-
-**For Node.js:** `got` - Highest security score, active maintenance
-**For Browser:** `ky` - Modern, tiny, TypeScript native
-**For Universal:** `axios` - Most popular, but review CVE-2021-3749
-
+**Recommendation:** {which package is better and why}
 ```
 
-### Quick Score Check
+## Next Steps
 
-For fast evaluation:
+Always end with:
 
-```markdown
-## Quick Score: axios@1.6.0
+1. **Check vulnerabilities:** `/endor-check {package}`
+2. **Upgrade analysis:** `/endor-upgrade {package}`
+3. **Full scan:** `/endor-scan` to see impact on your project
 
-**Endor Score:** 75/100
-**Verdict:** ⚠️ Acceptable with caveats
+## Error Handling
 
-- ✅ Very popular (95M weekly downloads)
-- ✅ Actively maintained
-- ⚠️ 1 historical CVE (fixed in 0.21.1)
-- ✅ TypeScript support
-- ✅ MIT License
-
-**Use this version?** Yes, 1.6.0 is safe.
-```
-
-### Evaluate Before Adding
-
-When user wants to add a new dependency:
-
-```markdown
-## Dependency Evaluation: zod
-
-Before adding `zod` to your project:
-
-| Check | Status | Notes |
-|-------|--------|-------|
-| Endor Score | 88/100 | Excellent |
-| Vulnerabilities | 0 | Clean |
-| License | MIT | Compatible |
-| Maintained | Yes | Very active |
-| TypeScript | Native | First-class |
-
-**Verdict:** ✅ Highly recommended
-
-```bash
-npm install zod
-```
-
-This package has excellent security posture and is actively maintained.
-```
+- **Package not found**: Check the package name and ecosystem. The OSS namespace may not have indexed the package yet.
+- **Metrics not available**: The package may be too new or too small for scoring.
+- **Auth error**: Suggest `/endor-setup`

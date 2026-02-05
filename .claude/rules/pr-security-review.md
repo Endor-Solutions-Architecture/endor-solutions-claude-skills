@@ -30,7 +30,7 @@ If any dependency files were modified:
 ### 2. SAST Analysis
 
 For all modified source files:
-- Run `opengrep` on changed files
+- Run `endor-labs-cli` on changed files
 - Report any new security findings
 - Block if critical SAST issues exist
 

@@ -1,155 +1,155 @@
 ---
 name: endor-explain
-description: Get detailed information about a specific vulnerability or security finding
+description: |
+  Get detailed information about a specific vulnerability (CVE) or security finding. Provides comprehensive explanation including severity, impact, attack vectors, and remediation.
+  - MANDATORY TRIGGERS: endor explain, explain cve, what is cve, vulnerability details, finding details, endor-explain, tell me about cve
 ---
 
-# Endor Labs: Explain Vulnerability
+# Endor Labs Vulnerability Explainer
 
-Get detailed information about a specific vulnerability or security finding.
+Provide detailed information about a specific CVE or security finding.
 
-## Arguments
+## Prerequisites
 
-$ARGUMENTS - CVE ID (e.g., CVE-2021-23337) or finding UUID
+- Endor Labs MCP server configured (run `/endor-setup` if not)
 
-## Instructions
+## Input Parsing
 
-1. Determine input type:
-   - Starts with `CVE-` → Vulnerability lookup
-   - UUID format → Finding lookup
+The user can provide:
 
-### For CVE lookup:
+1. **CVE ID** - e.g., `CVE-2021-23337`
+2. **Finding UUID** - from `/endor-findings` output
+3. **Package + vulnerability description** - e.g., "lodash prototype pollution"
 
-1. Call `get_endor_vulnerability` with the CVE ID
+## Workflow
 
-2. Also search findings to see if it affects any projects:
-   `spec.finding_metadata.vulnerability.spec.aliases contains CVE-2021-23337`
+### For CVE Lookup
 
-3. Present comprehensive explanation:
+#### Step 1: Get Vulnerability Details
+
+Use `get_endor_vulnerability` MCP tool with the CVE ID.
+
+#### Step 2: Find Affected Projects
+
+Use `get_security_findings` with filter:
+```
+spec.finding_categories contains FINDING_CATEGORY_VULNERABILITY
+```
+
+Search results for the specific CVE to see if it affects the current project.
+
+#### Step 3: Present Explanation
 
 ```markdown
-## CVE-2021-23337: Prototype Pollution in lodash
+## {CVE-ID}: {Title}
 
 ### Overview
+
 | Field | Value |
 |-------|-------|
-| CVE ID | CVE-2021-23337 |
-| Severity | CRITICAL (9.8) |
-| CWE | CWE-1321 (Prototype Pollution) |
-| Published | 2021-02-15 |
-| Fixed In | lodash >= 4.17.21 |
+| CVE | {cve_id} |
+| Severity | {severity} (CVSS: {score}) |
+| CWE | {cwe_id} - {cwe_name} |
+| Published | {date} |
+| Modified | {date} |
+| EPSS Score | {score}% probability of exploitation |
 
 ### Description
 
-The `lodash` library before version 4.17.21 is vulnerable to prototype pollution
-via the `setWith` and `set` functions. An attacker can modify the prototype of
-Object, potentially leading to:
+{Detailed description of the vulnerability}
 
-- Remote Code Execution (RCE)
-- Denial of Service (DoS)
-- Property injection
+### Impact
 
-### Affected Versions
-- lodash < 4.17.21
+{What an attacker could do if this vulnerability is exploited}
 
 ### Attack Vector
 
-```javascript
-// Malicious payload
-const payload = JSON.parse('{"__proto__": {"polluted": true}}');
-_.set({}, payload, "value");
+{How the vulnerability can be exploited - network, local, etc.}
 
-// Now all objects have .polluted = true
-console.log({}.polluted); // true
-```
+**CVSS Vector:** {vector_string}
 
-### Impact in Your Projects
+| Component | Value |
+|-----------|-------|
+| Attack Vector | {Network/Adjacent/Local/Physical} |
+| Attack Complexity | {Low/High} |
+| Privileges Required | {None/Low/High} |
+| User Interaction | {None/Required} |
 
-| Project | Package | Version | Reachable |
-|---------|---------|---------|-----------|
-| my-app | lodash | 4.17.15 | Yes |
-| api-service | lodash | 4.17.19 | No |
+### Affected Versions
+
+| Package | Affected Versions | Fixed Version |
+|---------|-------------------|---------------|
+| {pkg} | {range} | {fixed} |
+
+### Your Project Impact
+
+{If the CVE affects the current project:}
+
+- **Affected:** Yes
+- **Reachable:** {Yes/No}
+- **Package:** {package}@{version}
+- **Call Path:** {if reachable, show path}
+
+{If not affected:}
+- **Affected:** No - this CVE does not affect your current project
 
 ### Remediation
 
-**Immediate:** Upgrade to lodash@4.17.21 or later
-
-```bash
-npm install lodash@4.17.21
-```
-
-**Alternative:** If upgrade not possible, avoid using `set` and `setWith` with
-user-controlled input.
+1. **Upgrade** to {package}@{fixed_version}
+2. **Verify** with `/endor-check {package} {fixed_version}`
+3. **Check impact** with `/endor-upgrade {package} {fixed_version}`
 
 ### References
-- [NVD Entry](https://nvd.nist.gov/vuln/detail/CVE-2021-23337)
-- [GitHub Advisory](https://github.com/advisories/GHSA-35jh-r3h4-6jhm)
-- [Snyk Advisory](https://snyk.io/vuln/SNYK-JS-LODASH-1040724)
+
+{List of reference URLs from the CVE data}
 ```
 
-### For Finding UUID lookup:
+### For Finding UUID Lookup
 
-1. Call `retrieve_single_finding` with the UUID
+#### Step 1: Get Finding Details
 
-2. Get full context including:
-   - Affected function and file
-   - Call graph (if reachable)
-   - Related findings
+Use `retrieve_single_finding` MCP tool with the UUID.
 
-3. If it's a SAST finding, call `sast_context` for code context
+#### Step 2: Get Code Context (for SAST findings)
 
-4. Present detailed finding:
+If the finding is a SAST finding, use `sast_context` MCP tool to get the code context.
+
+#### Step 3: Present Finding Details
 
 ```markdown
-## Finding Details
+## Finding: {title}
 
-### Summary
+### Overview
+
 | Field | Value |
 |-------|-------|
-| Finding ID | {uuid} |
-| Type | Vulnerability |
-| Severity | CRITICAL |
-| Category | SCA |
-| Reachable | Yes |
+| UUID | {uuid} |
+| Category | {vulnerability/sast/secrets/license} |
+| Severity | {level} |
+| Reachable | {yes/no/n/a} |
+| Package | {package}@{version} |
+| File | {file_path}:{line} |
 
-### Affected Code
+### Description
 
-**Package:** lodash@4.17.15
-**Vulnerable Function:** `_.set()`
-**Your Code Path:**
-```
-src/api/user.js:45 → userController.update()
-  ↓ calls
-node_modules/lodash/set.js:23 → set()  [VULNERABLE]
-```
-
-### Reachability Analysis
-
-This vulnerability IS reachable from your code:
-
-1. `src/api/user.js` line 45 calls `_.set()` with user input
-2. User input flows to the vulnerable function without sanitization
-3. An attacker could exploit this via the `/api/user` endpoint
+{Detailed description}
 
 ### Code Context
 
-```javascript
-// src/api/user.js:43-50
-async function updateUser(req, res) {
-  const updates = req.body;
-  _.set(user, updates.path, updates.value);  // VULNERABLE
-  await user.save();
-}
+{For SAST findings, show the vulnerable code with context}
+
+### Remediation
+
+{Specific fix steps for this finding}
+
+### Next Steps
+
+1. **Fix this issue:** `/endor-fix {cve_or_id}`
+2. **View related findings:** `/endor-findings`
 ```
 
-### Recommended Fix
+## Error Handling
 
-```javascript
-// Safe alternative using allowlist
-const allowedPaths = ['name', 'email', 'settings.theme'];
-if (allowedPaths.includes(updates.path)) {
-  _.set(user, updates.path, updates.value);
-}
-```
-
-Or upgrade lodash to fix the vulnerability at the source.
-```
+- **CVE not found**: The CVE may not be in the Endor Labs database. Suggest checking the CVE ID format.
+- **Finding UUID not found**: The finding may have been resolved or the UUID is incorrect.
+- **Auth error**: Suggest `/endor-setup`
