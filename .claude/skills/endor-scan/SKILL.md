@@ -30,11 +30,25 @@ Identify the repository being scanned:
 
 ### Step 2: Run Scan
 
+Determine the scan mode based on user context:
+
+**Full repository scan (default):**
+
 Use the `scan` MCP tool with **all scan types** enabled:
 
 - `path`: The **absolute path** to the repository root (required - must be fully qualified, not relative)
 - `scan_types`: `["vulnerabilities", "dependencies", "sast", "secrets"]`
 - `scan_options`: `{ "quick_scan": true }`
+
+**Incremental PR scan** (when the user mentions "PR", "pull request", "just my changes", "incremental", or is on a feature branch):
+
+- `path`: The **absolute path** to the repository root
+- `scan_types`: `["vulnerabilities", "dependencies", "sast", "secrets"]`
+- `scan_options`: `{ "pr_incremental": true }`
+
+The incremental scan only reports **new findings introduced by the current changes** compared to the base branch. This is faster and more focused — ideal for scanning during active development or before a PR.
+
+If the user's intent is ambiguous, default to a full quick scan. If they ask to "scan my changes" or "scan before PR", use incremental mode.
 
 **IMPORTANT:** Always include `"sast"` in `scan_types`. Without it, SAST findings will not be returned.
 
@@ -43,7 +57,11 @@ If the user explicitly requests specific scan types (e.g. "only SCA" or "only SA
 If the MCP tool is not available or fails due to auth errors, fall back to CLI:
 
 ```bash
+# Full quick scan
 endorctl scan --path . --quick-scan --dependencies --sast --secrets --output-type summary
+
+# Incremental PR scan
+endorctl scan --path . --pr --dependencies --sast --secrets --output-type summary
 ```
 
 **IMPORTANT:** The `--sast` flag must be explicitly passed to the CLI. Without it, only SCA/dependency findings are returned. Similarly, `--secrets` must be explicit. The `--dependencies` flag enables SCA scanning.
@@ -62,7 +80,7 @@ The scan tool returns a list of finding UUIDs sorted by severity. For each criti
 
 **Path:** {scanned path}
 **Languages:** {detected languages}
-**Scan Type:** Quick
+**Scan Mode:** {Quick / Incremental PR}
 
 ### Vulnerability Summary
 

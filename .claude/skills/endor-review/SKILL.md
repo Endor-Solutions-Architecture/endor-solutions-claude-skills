@@ -16,9 +16,9 @@ Comprehensive security review of your changes before creating a pull request.
 
 ## Workflow
 
-### Step 1: Gather Changes
+### Step 1: Gather Changes and Run PR Scan
 
-Identify what has changed:
+Identify what has changed and run an incremental scan focused on the PR diff:
 
 ```bash
 # Get changed files (staged + unstaged)
@@ -37,6 +37,16 @@ Categorize changed files:
 - **Config files**: .env, docker-compose.yml, Dockerfile, etc.
 - **CI/CD files**: .github/workflows/*, Jenkinsfile, etc.
 
+**Run an incremental PR scan** using the `scan` MCP tool. This only reports **new findings introduced by the PR**, not pre-existing issues in the codebase:
+
+- `path`: The **absolute path** to the repository root
+- `scan_types`: `["vulnerabilities", "dependencies", "sast", "secrets"]`
+- `scan_options`: `{ "pr_incremental": true }`
+
+This is the preferred approach for PR reviews — it compares against the baseline and only surfaces findings introduced by the current changes, making the review focused and actionable.
+
+If the incremental scan is not available or fails, fall back to individual checks below.
+
 ### Step 2: Dependency Check
 
 If any dependency manifest files were modified:
@@ -49,7 +59,7 @@ If any dependency manifest files were modified:
 
 For modified source code files:
 
-1. Use the `scan` MCP tool with `scan_types: ["sast"]` on the repository
+1. Use the `scan` MCP tool with `scan_types: ["sast"]` on the repository (if not already covered by the PR scan in Step 1)
 2. Retrieve finding details with `get_resource` (resource_type: `Finding`)
 3. Read the affected source files to show code context
 
@@ -57,7 +67,7 @@ For modified source code files:
 
 Scan for secrets in the changes:
 
-1. Use the `scan` MCP tool with `scan_types: ["secrets"]` on the repository
+1. Use the `scan` MCP tool with `scan_types: ["secrets"]` on the repository (if not already covered by the PR scan in Step 1)
 2. Also manually check the git diff for common secret patterns (API keys, tokens, passwords)
 3. Flag any exposed credentials
 
@@ -85,6 +95,7 @@ If Dockerfile or docker-compose files were modified:
 **Branch:** {current_branch}
 **Files Changed:** {count}
 **Dependency Files Modified:** {yes/no}
+**Scan Mode:** {Incremental PR scan / Full scan fallback}
 
 ---
 
