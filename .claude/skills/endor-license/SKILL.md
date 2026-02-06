@@ -31,9 +31,18 @@ No license, custom license, proprietary, UNLICENSED
 
 ### Step 1: Get License Findings
 
-Use `get_security_findings` MCP tool with filter:
-```
-spec.finding_categories contains FINDING_CATEGORY_LICENSE_RISK
+Run a scan focused on dependencies to get license findings:
+
+Use the `scan` MCP tool:
+- `path`: Absolute path to the repository
+- `scan_types`: `["dependencies"]`
+- `scan_options`: `{ "quick_scan": true }`
+
+Then use `get_resource` MCP tool with `resource_type: Finding` for each finding UUID returned.
+
+Alternatively, use the CLI:
+```bash
+npx -y endorctl api list --resource Finding -n $ENDOR_NAMESPACE --filter "spec.finding_categories contains FINDING_CATEGORY_LICENSE_RISK"
 ```
 
 ### Step 2: Analyze Manifest Files

@@ -32,27 +32,28 @@ Perform static application security testing to find code-level vulnerabilities.
 
 ### Step 1: Run SAST Scan
 
-Use the `endor-labs-cli` MCP tool:
+Use the `scan` MCP tool with SAST-specific parameters:
 
-- `path`: Current working directory, specific file, or user-specified path
+- `path`: The **absolute path** to the repository root (or specific directory)
+- `scan_types`: `["sast"]`
+- `scan_options`: `{ "quick_scan": true }`
 
-If scanning specific files only, pass the file path directly.
+If the MCP tool is not available, fall back to CLI:
 
-### Step 2: Get Existing SAST Findings (Optional)
-
-If a full scan has been run previously, also check platform findings:
-
-Use `get_security_findings` with filter:
-```
-spec.finding_categories contains FINDING_CATEGORY_SAST
+```bash
+npx -y endorctl scan --path $(pwd) --sast --output-type summary
 ```
 
-### Step 3: Get Code Context
+### Step 2: Retrieve Finding Details
 
-For each SAST finding, use the `sast_context` MCP tool to get:
-- The vulnerable code snippet
-- Surrounding context
-- Data flow information
+The scan returns finding UUIDs. For each finding, use the `get_resource` MCP tool:
+
+- `uuid`: The finding UUID
+- `resource_type`: `Finding`
+
+### Step 3: Analyze Code Context
+
+Read the source files referenced in the findings to show the vulnerable code with surrounding context. Use the file path and line numbers from the finding data.
 
 ### Step 4: Present Results
 

@@ -209,7 +209,7 @@ If the user wants to scan a built image:
 
 ```bash
 # Scan with endorctl
-endorctl scan --image {image_name}:{tag} --output-type summary
+npx -y endorctl scan --image {image_name}:{tag} --output-type summary
 ```
 
 Present results similar to `/endor-scan` output.

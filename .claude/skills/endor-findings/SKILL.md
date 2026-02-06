@@ -50,10 +50,16 @@ Parse user input and construct the API filter string. If no filters specified, d
 
 ### Step 2: Query Findings
 
-Use the `get_security_findings` MCP tool:
+**Option A - After a scan:** The `scan` MCP tool returns finding UUIDs sorted by severity. Use these UUIDs with `get_resource` (resource_type: `Finding`) to retrieve details.
 
-- `filter`: Constructed filter string
-- `page_size`: 20 (default, adjustable)
+**Option B - From platform data:** Run a scan first with `/endor-scan`, then retrieve individual findings using the `get_resource` MCP tool:
+- `resource_type`: `Finding`
+- `uuid`: Finding UUID from scan results
+
+**Option C - CLI fallback:** Use the endorctl CLI to list findings:
+```bash
+npx -y endorctl api list --resource Finding -n $ENDOR_NAMESPACE --filter "{filter_string}"
+```
 
 ### Step 3: Present Results
 

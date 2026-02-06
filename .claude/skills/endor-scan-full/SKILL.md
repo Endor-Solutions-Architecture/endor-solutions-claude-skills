@@ -39,16 +39,16 @@ Tell the user:
 
 ### Step 3: Run Full Scan
 
-Use the `scan_repository` MCP tool:
+Use the `scan` MCP tool with these parameters:
 
-- `path`: Current working directory (or user-specified path)
-- `languages`: Detected languages
-- `reachability`: true
+- `path`: The **absolute path** to the repository root (required - must be fully qualified)
+- `scan_types`: `["vulnerabilities", "dependencies", "secrets", "sast"]`
+- `scan_options`: `{ "quick_scan": false }` (disabling quick_scan enables full reachability analysis)
 
 If the MCP tool is not available, fall back to CLI:
 
 ```bash
-endorctl scan --path . --output-type summary
+npx -y endorctl scan --path $(pwd) --output-type summary
 ```
 
 ### Step 4: Present Results
@@ -97,9 +97,13 @@ Format results emphasizing reachability:
 4. **Upgrade with impact analysis:** `/endor-upgrade {package}`
 ```
 
-### Step 5: Call Path Details
+### Step 5: Finding Details
 
-If the user asks about a specific finding, use the `getCallers` MCP tool to show the full call path from application entry point to the vulnerable function.
+For each finding UUID returned by the scan, use the `get_resource` MCP tool to retrieve full details:
+- `uuid`: The finding UUID
+- `resource_type`: `Finding`
+
+The finding data includes reachability information and call paths when available.
 
 ## Error Handling
 

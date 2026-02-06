@@ -23,23 +23,32 @@ Parse the user's input to extract:
 
 ## Workflow
 
-### Step 1: Get Package Information
+### Step 1: Get Package Vulnerability Information
 
-Query the OSS namespace for the package:
+First, check the package for vulnerabilities using the `check_dependency_for_vulnerabilities` MCP tool:
+- `ecosystem`: Package ecosystem (npm, python, go, java, maven)
+- `dependency_name`: Package name
+- `version`: Version to evaluate
 
+### Step 2: Get Package Metrics via CLI
+
+Use the CLI to query package metrics from the OSS namespace:
+
+```bash
+# Get package version info
+npx -y endorctl api list --resource PackageVersion -n oss --filter "meta.name=={ecosystem}://{package}@{version}"
+
+# Get package scorecard (use the package UUID from the previous command)
+npx -y endorctl api list --resource Metric -n oss --filter "meta.name==package_version_scorecard and meta.parent_uuid=={package_uuid}"
 ```
-GET /v1/namespaces/oss/package-versions
-Filter: meta.name=={ecosystem}://{package}@{version}
-```
 
-### Step 2: Get Package Metrics
+Alternatively, use the `get_resource` MCP tool:
+- `name`: `{ecosystem}://{package}@{version}`
+- `resource_type`: `PackageVersion`
 
-Query metrics for the package:
-
-```
-GET /v1/namespaces/oss/metrics
-Filter: meta.name==package_version_scorecard and meta.parent_uuid=={package_uuid}
-```
+Then get metrics:
+- `resource_type`: `Metric`
+- `name`: `package_version_scorecard` (with the package UUID as parent)
 
 ### Step 3: Present Scores
 
