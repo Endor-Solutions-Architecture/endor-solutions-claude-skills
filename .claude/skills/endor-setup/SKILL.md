@@ -1,124 +1,197 @@
 ---
 name: endor-setup
 description: |
-  Onboarding wizard for Endor Labs. Guides users through installing endorctl, authenticating, configuring namespace, and running their first scan.
+  Onboarding wizard for Endor Labs. Guides users through prerequisites, MCP server configuration, authentication, namespace setup, and running their first scan.
   - MANDATORY TRIGGERS: endor setup, endor onboarding, endor configure, endor auth, endor install, setup endor
 ---
 
 # Endor Labs Setup Wizard
 
-Guide the user from zero to scanning in 5 minutes.
+Guide the user from zero to scanning in 5 minutes. The MCP server runs via `npx` using the published `endorctl` npm package - no binary installation required.
 
 ## Step 1: Check Prerequisites
 
-### 1.1 Check if endorctl is installed
+### 1.1 Check if Node.js is installed
+
+Node.js v18+ is required to run the MCP server via `npx`.
 
 ```bash
-endorctl --version 2>/dev/null
+node --version
 ```
 
 If not installed, provide installation instructions:
 
 ```bash
 # macOS (Homebrew)
-brew install endorlabs/tap/endorctl
+brew install node
 
-# macOS / Linux (curl)
-curl https://api.endorlabs.com/download/latest/endorctl_linux_amd64 -o endorctl
-chmod +x endorctl
-sudo mv endorctl /usr/local/bin/
+# Ubuntu/Debian
+curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+sudo apt-get install -y nodejs
 
-# Verify installation
-endorctl --version
+# Or use nvm (recommended)
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+nvm install 20
 ```
 
-### 1.2 Check if MCP server is configured
+### 1.2 Verify npx is available
 
-Check if the MCP server configuration exists. Look for `endor-mcp-server` in the project's `.claude/settings.json` or the user's global Claude settings.
+```bash
+npx --version
+```
 
-If not configured, create or update `.claude/settings.json`:
+npx comes bundled with Node.js. If missing, run `npm install -g npx`.
+
+### 1.3 Quick test of endorctl via npx
+
+```bash
+npx -y endorctl --version
+```
+
+This downloads and runs endorctl without installing it globally. The `-y` flag auto-confirms the download.
+
+## Step 2: Configure the MCP Server
+
+### 2.1 Check if MCP server is already configured
+
+Look for `endor-cli-tools` in the project's `.claude/settings.json`.
+
+### 2.2 If not configured, create the settings
+
+Create or update `.claude/settings.json` in the project root:
 
 ```json
 {
   "mcpServers": {
-    "endor-mcp-server": {
-      "command": "endorctl",
-      "args": ["ai-tools", "mcp-server"],
+    "endor-cli-tools": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "endorctl",
+        "ai-tools",
+        "mcp-server"
+      ],
       "env": {
-        "ENDOR_NAMESPACE": "${ENDOR_NAMESPACE}",
-        "ENDOR_API": "https://api.endorlabs.com"
+        "ENDOR_NAMESPACE": "your-namespace",
+        "ENDOR_API": "https://api.endorlabs.com",
+        "ENDOR_MCP_SERVER_AUTH_MODE": "google"
       }
     }
   }
 }
 ```
 
-Tell the user they need to restart Claude Code after updating settings.json for the MCP server to become available.
+### 2.3 Important: Restart Required
 
-## Step 2: Authenticate
+Tell the user: **You must restart Claude Code after creating or modifying settings.json for the MCP server to become available.**
 
-### 2.1 Check authentication status
+## Step 3: Choose Authentication Method
+
+Ask the user which authentication provider they use:
+
+| Provider | `ENDOR_MCP_SERVER_AUTH_MODE` | Additional Config |
+|----------|-------------------------------|-------------------|
+| Google | `google` | None |
+| GitHub | `github` | None |
+| GitLab | `gitlab` | None |
+| Enterprise SSO | `sso` | Also set `ENDOR_MCP_SERVER_AUTH_TENANT` |
+| Email | `email` | Also set `ENDOR_MCP_SERVER_AUTH_EMAIL` |
+
+Update the `ENDOR_MCP_SERVER_AUTH_MODE` in settings.json accordingly.
+
+On first MCP tool call, the server will automatically open a browser window for authentication. The token is cached for 1 hour.
+
+### For CI/CD or headless environments
+
+Instruct the user to set these environment variables themselves (never ask them to paste credentials into chat):
 
 ```bash
-endorctl auth status
-```
-
-### 2.2 If not authenticated, guide login
-
-```bash
-# Interactive browser login (recommended for first-time)
-endorctl auth login
-
-# Or use API key (for CI/CD or headless environments)
 export ENDOR_API_CREDENTIALS_KEY=<your-api-key>
 export ENDOR_API_CREDENTIALS_SECRET=<your-api-secret>
 ```
 
-**Important:** Never ask the user to paste their API key or secret into chat. Instruct them to set environment variables themselves.
-
-## Step 3: Configure Namespace
-
-### 3.1 Check current namespace
+Or use a pre-existing token:
 
 ```bash
-echo $ENDOR_NAMESPACE
+export ENDOR_TOKEN=<your-token>
 ```
 
-### 3.2 If not set, help the user find their namespace
+## Step 4: Configure Namespace
 
-Ask the user for their Endor Labs namespace (organization name). Then:
+### 4.1 Ask for their namespace
 
-```bash
-export ENDOR_NAMESPACE=<their-namespace>
+The namespace is their Endor Labs organization name. They can find it at [app.endorlabs.com](https://app.endorlabs.com) in the top-left corner.
+
+### 4.2 Update settings.json
+
+Replace `"demo-trial"` with their actual namespace in the `ENDOR_NAMESPACE` field.
+
+If they don't have a namespace yet, `demo-trial` provides limited demo access.
+
+### 4.3 For new users without an account
+
+Direct them to:
+- Sign up at [endorlabs.com](https://www.endorlabs.com) (free tier available)
+- Or run `/endor-demo` to try with simulated data
+
+## Step 5: Verify Setup
+
+After restarting Claude Code, try using one of the MCP tools to verify the connection:
+
+Use the `check_dependency_for_vulnerabilities` MCP tool with a known package:
+- ecosystem: `npm`
+- dependency_name: `lodash`
+- version: `4.17.20`
+
+If this returns vulnerability data, the setup is working.
+
+If it opens a browser for authentication, that's expected on first use. Complete the login flow.
+
+## Step 6: Success
+
+Congratulate the user and provide next steps:
+
+```markdown
+## Setup Complete!
+
+Your Endor Labs MCP server is configured and ready. Here's what to try:
+
+### First Steps
+1. `/endor-scan` - Scan your current project for security issues
+2. `/endor-check express 4.17.1` - Check a dependency for vulnerabilities
+3. `/endor-help` - See all available commands
+
+### Daily Workflow
+- Run `/endor-scan` regularly during development
+- Use `/endor-check` when adding new dependencies
+- Run `/endor-review` before creating pull requests
+
+### Learn More
+- `/endor-demo` - Interactive demo with sample data
+- `/endor-help` - Full command reference
 ```
-
-Suggest adding this to their shell profile (`.bashrc`, `.zshrc`) for persistence.
-
-## Step 4: Run Test Scan
-
-Run a quick scan to verify everything works:
-
-```bash
-endorctl scan --path . --output-type summary
-```
-
-If this succeeds, the setup is complete.
-
-## Step 5: Success
-
-Congratulate the user and suggest next steps:
-
-1. **Quick scan**: Run `/endor-scan` for a fast security overview
-2. **Full scan**: Run `/endor-scan-full` for deep reachability analysis
-3. **Check a package**: Run `/endor-check` to check a specific dependency
-4. **See all commands**: Run `/endor-help` for a complete command reference
 
 ## Troubleshooting
 
 | Issue | Solution |
 |-------|----------|
-| `endorctl: command not found` | Install endorctl (see Step 1) |
-| `authentication required` | Run `endorctl auth login` |
-| `namespace not found` | Verify ENDOR_NAMESPACE is correct |
-| `MCP tools not available` | Check settings.json and restart Claude Code |
+| `node: command not found` | Install Node.js v18+ (see Step 1) |
+| `npx: command not found` | Install Node.js v18+ (npx is bundled) |
+| `endorctl: not found via npx` | Check internet connection; run `npx -y endorctl --version` |
+| MCP tools not showing in Claude Code | Restart Claude Code after editing settings.json |
+| Browser auth not opening | Check `ENDOR_MCP_SERVER_AUTH_MODE` is set correctly |
+| `namespace not found` | Verify ENDOR_NAMESPACE matches your org name at app.endorlabs.com |
 | `permission denied` | Verify your account has access to the namespace |
+| Timeout on first run | First `npx` run downloads the package - this may take 30-60 seconds |
+| Behind a corporate proxy | Set `HTTPS_PROXY` environment variable in settings.json env block |
+
+## Available MCP Tools After Setup
+
+Once configured, these tools are available to Claude Code:
+
+| Tool | Description |
+|------|-------------|
+| `scan` | Scan repository for vulnerabilities, secrets, SAST issues |
+| `check_dependency_for_vulnerabilities` | Check a specific package version for CVEs |
+| `get_endor_vulnerability` | Get detailed CVE/GHSA vulnerability information |
+| `get_resource` | Retrieve any Endor Labs resource (Project, Finding, Policy, etc.) |

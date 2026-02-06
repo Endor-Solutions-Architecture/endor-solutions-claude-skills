@@ -28,18 +28,19 @@ If the user doesn't specify a language, detect it from:
 2. Manifest files in the current directory
 3. Ask the user if ambiguous
 
-### Language Mapping
+### Ecosystem Mapping
 
-| Ecosystem | Language Parameter |
-|-----------|-------------------|
-| npm/yarn | `javascript` |
+The MCP tool uses specific ecosystem names:
+
+| Package Manager | `ecosystem` Parameter |
+|-----------------|----------------------|
+| npm/yarn | `npm` |
 | pip/poetry | `python` |
 | Go modules | `go` |
-| Maven/Gradle | `java` |
-| Cargo | `rust` |
-| NuGet | `dotnet` |
-| RubyGems | `ruby` |
-| Composer | `php` |
+| Maven | `maven` |
+| Gradle | `java` |
+
+Note: For Maven packages, use `groupid:artifactid` format for the dependency name (e.g., `org.apache.logging.log4j:log4j-core`).
 
 ## Workflow
 
@@ -47,9 +48,9 @@ If the user doesn't specify a language, detect it from:
 
 Use the `check_dependency_for_vulnerabilities` MCP tool:
 
-- `language`: Detected or specified language
-- `dependency`: Package name
-- `version`: Specified version (or latest if not provided)
+- `ecosystem`: Package ecosystem (see mapping above)
+- `dependency_name`: Package name (for Maven: `groupid:artifactid`)
+- `version`: Specified version
 
 ### Step 2: Present Results
 

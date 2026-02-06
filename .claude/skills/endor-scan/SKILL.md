@@ -7,7 +7,7 @@ description: |
 
 # Endor Labs Quick Scan
 
-Perform a fast security scan of the current repository. This provides a rapid overview without full reachability analysis.
+Perform a fast security scan of the current repository.
 
 ## Prerequisites
 
@@ -20,23 +20,21 @@ Perform a fast security scan of the current repository. This provides a rapid ov
 
 Identify the repository being scanned:
 
-1. Check the current working directory
+1. Determine the **absolute path** to the current working directory (the scan tool requires fully qualified paths)
 2. Detect languages by looking for manifest files:
    - `package.json` / `yarn.lock` -> JavaScript/TypeScript
    - `go.mod` / `go.sum` -> Go
    - `requirements.txt` / `pyproject.toml` / `setup.py` -> Python
    - `pom.xml` / `build.gradle` -> Java
    - `Cargo.toml` -> Rust
-   - `*.csproj` -> .NET
-   - `Gemfile` -> Ruby
-   - `composer.json` -> PHP
 
 ### Step 2: Run Scan
 
 Use the `scan` MCP tool with **all scan types** enabled:
 
-- `path`: Current working directory (or user-specified path)
+- `path`: The **absolute path** to the repository root (required - must be fully qualified, not relative)
 - `scan_types`: `["vulnerabilities", "dependencies", "sast", "secrets"]`
+- `scan_options`: `{ "quick_scan": true }`
 
 **IMPORTANT:** Always include `"sast"` in `scan_types`. Without it, SAST findings will not be returned.
 
@@ -50,16 +48,21 @@ endorctl scan --path . --quick-scan --dependencies --sast --secrets --output-typ
 
 **IMPORTANT:** The `--sast` flag must be explicitly passed to the CLI. Without it, only SCA/dependency findings are returned. Similarly, `--secrets` must be explicit. The `--dependencies` flag enables SCA scanning.
 
-### Step 3: Present Results
+### Step 3: Retrieve Finding Details
 
-Format the scan results using this structure:
+The scan tool returns a list of finding UUIDs sorted by severity. For each critical/high finding, use the `get_resource` MCP tool to retrieve details:
+
+- `uuid`: The finding UUID from the scan results
+- `resource_type`: `Finding`
+
+### Step 4: Present Results
 
 ```markdown
 ## Security Scan Complete
 
 **Path:** {scanned path}
 **Languages:** {detected languages}
-**Scan Type:** Quick (no reachability analysis)
+**Scan Type:** Quick
 
 ### Vulnerability Summary
 
@@ -77,17 +80,12 @@ Format the scan results using this structure:
 | 1 | {pkg} | {cve} | Critical | {desc} |
 | 2 | {pkg} | {cve} | High | {desc} |
 
-### Other Issues
-
-- **Secrets found:** {count} (run `/endor-secrets` for details)
-- **SAST issues:** {count} (run `/endor-sast` for details)
-- **License risks:** {count} (run `/endor-license` for details)
-
 ### Next Steps
 
 1. **Fix critical issues:** `/endor-fix {top-cve}`
-2. **Deep analysis:** `/endor-scan-full` for reachability analysis
-3. **View all findings:** `/endor-findings`
+2. **Deep analysis:** `/endor-scan-full` for full reachability analysis
+3. **Check a specific package:** `/endor-check {package}`
+4. **View vulnerability details:** `/endor-explain {cve}`
 ```
 
 ### Priority Order
@@ -102,7 +100,7 @@ Present findings in this order:
 
 ## Error Handling
 
-- **Auth error**: Suggest `/endor-setup`
+- **Auth error / browser opens**: Expected on first use. Tell user to complete browser login, then retry.
 - **No manifest found**: Tell user no supported project detected, list supported languages
-- **Scan timeout**: Suggest `/endor-scan-full` which handles larger repos better
-- **MCP not available**: Fall back to CLI command
+- **Scan timeout**: Suggest using fewer scan_types or scanning a subdirectory
+- **MCP not available**: Fall back to CLI command, suggest `/endor-setup`

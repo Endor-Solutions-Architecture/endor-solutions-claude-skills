@@ -26,24 +26,26 @@ The user can provide:
 ### Step 1: Identify the Vulnerability
 
 If the user provided a CVE ID:
-1. Use `get_endor_vulnerability` MCP tool to get CVE details
-2. Use `get_security_findings` to find affected projects
+1. Use `get_endor_vulnerability` MCP tool with `vuln_id` parameter to get CVE details
+2. Identify affected packages from the vulnerability data
 
 If the user provided a package name:
-1. Use `check_dependency_for_vulnerabilities` to get all CVEs
-2. Prioritize by severity and reachability
+1. Use `check_dependency_for_vulnerabilities` MCP tool to get all CVEs for that package
+   - Parameters: `ecosystem`, `dependency_name`, `version`
+2. The tool returns vulnerability counts and recommended upgrade versions
 
 If the user provided a finding UUID:
-1. Use `retrieve_single_finding` to get details
+1. Use `get_resource` MCP tool with `resource_type: Finding` and the UUID
 
 ### Step 2: Find Safe Upgrade Path
 
-Use the `get_dependency_upgrade_opts` MCP tool:
+The `check_dependency_for_vulnerabilities` MCP tool automatically returns recommended upgrade versions that fix the vulnerabilities. Use it with:
 
-- `dependency`: Affected package name
-- `language`: Package language/ecosystem
+- `ecosystem`: Package ecosystem (npm, python, go, java, maven)
+- `dependency_name`: Affected package name
+- `version`: Current version
 
-This returns available versions with vulnerability status.
+The tool returns the latest available version and recommended versions that fix the vulnerabilities.
 
 ### Step 3: Determine Fix Strategy
 
@@ -117,10 +119,16 @@ Ask the user if they want you to apply the fix:
 
 ## Data Source Priority
 
-1. MCP tools (preferred): `get_dependency_upgrade_opts`, `get_security_findings`
-2. API calls: VersionUpgradeService endpoints
-3. CLI fallback: `endorctl recommend dependency-upgrades`
-4. **NEVER search the internet for upgrade recommendations**
+1. MCP tools (preferred): `check_dependency_for_vulnerabilities`, `get_endor_vulnerability`, `get_resource`
+2. CLI fallback: `npx -y endorctl api list --resource Finding -n $ENDOR_NAMESPACE 2>/dev/null`
+3. **NEVER search the internet for upgrade recommendations**
+
+**Important CLI parsing notes:**
+- Always use `2>/dev/null` when piping CLI output to a JSON parser (stderr contains progress messages)
+- `spec.remediation` is a **plain string** (e.g., `"Update project to use django version 4.2.15 (current: 4.2, latest: 6.0.2)."`), NOT a nested object. Parse the version from this string.
+- `spec.target_dependency_package_name` includes ecosystem prefix (e.g., `pypi://django@4.2`). Strip the prefix for display.
+- CVE/GHSA ID is in `spec.extra_key` or `spec.finding_metadata.vulnerability.meta.name`
+- CVSS score is at `spec.finding_metadata.vulnerability.spec.cvss_v3_severity.score`
 
 ## Error Handling
 

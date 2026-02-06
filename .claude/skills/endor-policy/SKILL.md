@@ -12,6 +12,7 @@ Create and manage security policies for automated enforcement.
 ## Prerequisites
 
 - Endor Labs MCP server configured (run `/endor-setup` if not)
+- Node.js v18+ with `npx` available
 - Admin access to the Endor Labs namespace
 
 ## Policy Types
@@ -41,7 +42,7 @@ Create and manage security policies for automated enforcement.
 Query existing policies:
 
 ```bash
-endorctl api list --resource FindingPolicy -n $ENDOR_NAMESPACE
+npx -y endorctl api list --resource FindingPolicy -n $ENDOR_NAMESPACE 2>/dev/null
 ```
 
 Present results:
@@ -63,7 +64,7 @@ Present results:
 This policy blocks PRs that introduce critical reachable vulnerabilities.
 
 ```bash
-endorctl api create --resource FindingPolicy -n $ENDOR_NAMESPACE --data '{
+npx -y endorctl api create --resource FindingPolicy -n $ENDOR_NAMESPACE 2>/dev/null --data '{
   "meta": {
     "name": "block-critical-reachable",
     "description": "Block PRs with critical reachable vulnerabilities"
@@ -80,7 +81,7 @@ endorctl api create --resource FindingPolicy -n $ENDOR_NAMESPACE --data '{
 #### Template: license-compliance
 
 ```bash
-endorctl api create --resource FindingPolicy -n $ENDOR_NAMESPACE --data '{
+npx -y endorctl api create --resource FindingPolicy -n $ENDOR_NAMESPACE 2>/dev/null --data '{
   "meta": {
     "name": "license-compliance",
     "description": "Block strong copyleft licenses"
@@ -97,7 +98,7 @@ endorctl api create --resource FindingPolicy -n $ENDOR_NAMESPACE --data '{
 #### Template: no-secrets
 
 ```bash
-endorctl api create --resource FindingPolicy -n $ENDOR_NAMESPACE --data '{
+npx -y endorctl api create --resource FindingPolicy -n $ENDOR_NAMESPACE 2>/dev/null --data '{
   "meta": {
     "name": "no-secrets",
     "description": "Block any exposed secrets"
@@ -124,7 +125,7 @@ If the user wants a custom policy, help them build the filter using the filter r
 Create an exception for an accepted risk:
 
 ```bash
-endorctl api create --resource ExceptionPolicy -n $ENDOR_NAMESPACE --data '{
+npx -y endorctl api create --resource ExceptionPolicy -n $ENDOR_NAMESPACE 2>/dev/null --data '{
   "meta": {
     "name": "exception-{finding-id}",
     "description": "{reason for exception}"

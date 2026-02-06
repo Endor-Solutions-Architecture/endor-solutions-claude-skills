@@ -47,18 +47,18 @@ If any dependency manifest files were modified:
 
 ### Step 3: SAST Analysis
 
-For all modified source code files:
+For modified source code files:
 
-1. Use the `endor-labs-cli` MCP tool on each changed file
-2. Report any security findings
-3. Use `sast_context` for detailed code context on findings
+1. Use the `scan` MCP tool with `scan_types: ["sast"]` on the repository
+2. Retrieve finding details with `get_resource` (resource_type: `Finding`)
+3. Read the affected source files to show code context
 
 ### Step 4: Secrets Detection
 
-Scan all changed files for secrets:
+Scan for secrets in the changes:
 
-1. Use the `endor-labs-cli` MCP tool with secrets ruleset on changed files
-2. Also manually check for common secret patterns in the diff
+1. Use the `scan` MCP tool with `scan_types: ["secrets"]` on the repository
+2. Also manually check the git diff for common secret patterns (API keys, tokens, passwords)
 3. Flag any exposed credentials
 
 ### Step 5: License Check
