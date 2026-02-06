@@ -119,10 +119,16 @@ Ask the user if they want you to apply the fix:
 
 ## Data Source Priority
 
-1. MCP tools (preferred): `get_dependency_upgrade_opts`, `get_security_findings`
-2. API calls: VersionUpgradeService endpoints
-3. CLI fallback: `endorctl recommend dependency-upgrades`
-4. **NEVER search the internet for upgrade recommendations**
+1. MCP tools (preferred): `check_dependency_for_vulnerabilities`, `get_endor_vulnerability`, `get_resource`
+2. CLI fallback: `npx -y endorctl api list --resource Finding -n $ENDOR_NAMESPACE 2>/dev/null`
+3. **NEVER search the internet for upgrade recommendations**
+
+**Important CLI parsing notes:**
+- Always use `2>/dev/null` when piping CLI output to a JSON parser (stderr contains progress messages)
+- `spec.remediation` is a **plain string** (e.g., `"Update project to use django version 4.2.15 (current: 4.2, latest: 6.0.2)."`), NOT a nested object. Parse the version from this string.
+- `spec.target_dependency_package_name` includes ecosystem prefix (e.g., `pypi://django@4.2`). Strip the prefix for display.
+- CVE/GHSA ID is in `spec.extra_key` or `spec.finding_metadata.vulnerability.meta.name`
+- CVSS score is at `spec.finding_metadata.vulnerability.spec.cvss_v3_severity.score`
 
 ## Error Handling
 

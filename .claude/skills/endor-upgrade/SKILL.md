@@ -50,14 +50,16 @@ Parse the user's input to extract:
 
 ```bash
 # Get upgrade recommendations with Change Impact Analysis
-npx -y endorctl recommend dependency-upgrades --security-only --use-cia --persist --project-uuid=$PROJECT_UUID -n $ENDOR_NAMESPACE
+npx -y endorctl recommend dependency-upgrades --security-only --use-cia --persist --project-uuid=$PROJECT_UUID -n $ENDOR_NAMESPACE 2>/dev/null
 
 # Or query version upgrade service via API
 npx -y endorctl api create --resource VersionUpgrade -n $ENDOR_NAMESPACE --data '{
   "context": {"type": "project", "id": "{project_uuid}"},
   "request": {"package_version": "{ecosystem}://{package}@{current_version}", "target_version": "{target_version}"}
-}'
+}' 2>/dev/null
 ```
+
+**Important:** Always use `2>/dev/null` when piping CLI output to a JSON parser (stderr contains progress messages that corrupt JSON parsing).
 
 ### Step 3: Present Analysis
 

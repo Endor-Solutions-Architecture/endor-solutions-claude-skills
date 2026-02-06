@@ -40,10 +40,12 @@ Use the `scan` MCP tool:
 
 Then use `get_resource` MCP tool with `resource_type: Finding` for each finding UUID returned.
 
-Alternatively, use the CLI:
+Alternatively, use the CLI (always redirect stderr with `2>/dev/null` when piping to a JSON parser):
 ```bash
-npx -y endorctl api list --resource Finding -n $ENDOR_NAMESPACE --filter "spec.finding_categories contains FINDING_CATEGORY_LICENSE_RISK"
+npx -y endorctl api list --resource Finding -n $ENDOR_NAMESPACE --filter "spec.finding_categories contains FINDING_CATEGORY_LICENSE_RISK" 2>/dev/null
 ```
+
+**CLI parsing notes:** `spec.remediation` is a plain string (not a nested object), and `spec.target_dependency_package_name` includes an ecosystem prefix (e.g., `pypi://django@4.2`) that should be stripped for display.
 
 ### Step 2: Analyze Manifest Files
 

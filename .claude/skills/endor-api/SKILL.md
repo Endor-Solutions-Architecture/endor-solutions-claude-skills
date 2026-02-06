@@ -59,15 +59,17 @@ The following MCP tools are available and should be used when applicable:
 **Using endorctl CLI (for operations not covered by MCP tools):**
 
 ```bash
-# List resources with filter
-npx -y endorctl api list --resource {Resource} -n $ENDOR_NAMESPACE --filter "{filter}"
+# List resources with filter (always redirect stderr to avoid JSON parse errors)
+npx -y endorctl api list --resource {Resource} -n $ENDOR_NAMESPACE --filter "{filter}" 2>/dev/null
 
 # Get a single resource
-npx -y endorctl api get --resource {Resource} -n $ENDOR_NAMESPACE --uuid {uuid}
+npx -y endorctl api get --resource {Resource} -n $ENDOR_NAMESPACE --uuid {uuid} 2>/dev/null
 
 # Create a resource
-npx -y endorctl api create --resource {Resource} -n $ENDOR_NAMESPACE --data '{json}'
+npx -y endorctl api create --resource {Resource} -n $ENDOR_NAMESPACE --data '{json}' 2>/dev/null
 ```
+
+**Important:** Always use `2>/dev/null` when piping CLI output to a JSON parser. The CLI writes progress/auth messages to stderr that will corrupt JSON parsing.
 
 **Common Resource Types:**
 
@@ -111,19 +113,19 @@ field < value
 ```bash
 # Critical reachable vulnerabilities
 npx -y endorctl api list --resource Finding -n $ENDOR_NAMESPACE \
-  --filter "spec.level==FINDING_LEVEL_CRITICAL and spec.finding_tags contains FINDING_TAGS_REACHABLE_FUNCTION"
+  --filter "spec.level==FINDING_LEVEL_CRITICAL and spec.finding_tags contains FINDING_TAGS_REACHABLE_FUNCTION" 2>/dev/null
 
 # Findings for a specific project
 npx -y endorctl api list --resource Finding -n $ENDOR_NAMESPACE \
-  --filter "spec.project_uuid=={project_uuid}"
+  --filter "spec.project_uuid=={project_uuid}" 2>/dev/null
 
 # Projects by name
 npx -y endorctl api list --resource Project -n $ENDOR_NAMESPACE \
-  --filter "meta.name contains '{name}'"
+  --filter "meta.name contains '{name}'" 2>/dev/null
 
 # Package metrics
 npx -y endorctl api list --resource Metric -n oss \
-  --filter "meta.name==package_version_scorecard and meta.parent_uuid=={pkg_uuid}"
+  --filter "meta.name==package_version_scorecard and meta.parent_uuid=={pkg_uuid}" 2>/dev/null
 ```
 
 ### Step 4: Present Results
@@ -152,13 +154,13 @@ Format the API response based on the resource type:
 ```bash
 npx -y endorctl api list --resource Finding -n $ENDOR_NAMESPACE \
   --filter "spec.level==FINDING_LEVEL_CRITICAL" \
-  --page-size 20
+  --page-size 20 2>/dev/null
 ```
 
 ### Get project details
 ```bash
 npx -y endorctl api list --resource Project -n $ENDOR_NAMESPACE \
-  --filter "meta.name contains 'my-project'"
+  --filter "meta.name contains 'my-project'" 2>/dev/null
 ```
 
 ### Check upgrade options
@@ -167,14 +169,29 @@ npx -y endorctl api create --resource VersionUpgrade -n $ENDOR_NAMESPACE \
   --data '{
     "context": {"type": "project", "id": "{project_uuid}"},
     "request": {"package_version": "npm://lodash@4.17.15", "target_version": "4.17.21"}
-  }'
+  }' 2>/dev/null
 ```
 
 ### Get package score from OSS namespace
 ```bash
 npx -y endorctl api list --resource Metric -n oss \
-  --filter "meta.name==package_version_scorecard and meta.parent_uuid=={package_uuid}"
+  --filter "meta.name==package_version_scorecard and meta.parent_uuid=={package_uuid}" 2>/dev/null
 ```
+
+## Finding Response Structure
+
+When parsing Finding resources from the CLI, use these exact field paths:
+
+- **Title**: `meta.description` (e.g., `"GHSA-xxxx: Human-readable title"`)
+- **Severity**: `spec.level` (e.g., `FINDING_LEVEL_CRITICAL`)
+- **CVE/GHSA ID**: `spec.extra_key` or `spec.finding_metadata.vulnerability.meta.name`
+- **Package**: `spec.target_dependency_package_name` — **NOTE: includes ecosystem prefix** (e.g., `pypi://django@4.2`). Strip prefix for display.
+- **Version**: `spec.target_dependency_version`
+- **Categories**: `spec.finding_categories` (array of strings)
+- **Tags/Reachability**: `spec.finding_tags` — check for `FINDING_TAGS_REACHABLE_FUNCTION`
+- **Remediation**: `spec.remediation` — **plain string**, NOT a nested object (e.g., `"Update project to use django version 4.2.15 (current: 4.2, latest: 6.0.2)."`)
+- **CVSS Score**: `spec.finding_metadata.vulnerability.spec.cvss_v3_severity.score`
+- **Vulnerability Summary**: `spec.finding_metadata.vulnerability.spec.summary`
 
 ## Error Handling
 

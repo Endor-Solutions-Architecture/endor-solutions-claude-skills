@@ -35,11 +35,11 @@ First, check the package for vulnerabilities using the `check_dependency_for_vul
 Use the CLI to query package metrics from the OSS namespace:
 
 ```bash
-# Get package version info
-npx -y endorctl api list --resource PackageVersion -n oss --filter "meta.name=={ecosystem}://{package}@{version}"
+# Get package version info (always redirect stderr when piping to JSON parser)
+npx -y endorctl api list --resource PackageVersion -n oss --filter "meta.name=={ecosystem}://{package}@{version}" 2>/dev/null
 
 # Get package scorecard (use the package UUID from the previous command)
-npx -y endorctl api list --resource Metric -n oss --filter "meta.name==package_version_scorecard and meta.parent_uuid=={package_uuid}"
+npx -y endorctl api list --resource Metric -n oss --filter "meta.name==package_version_scorecard and meta.parent_uuid=={package_uuid}" 2>/dev/null
 ```
 
 Alternatively, use the `get_resource` MCP tool:

@@ -58,8 +58,54 @@ Parse user input and construct the API filter string. If no filters specified, d
 
 **Option C - CLI fallback:** Use the endorctl CLI to list findings:
 ```bash
-npx -y endorctl api list --resource Finding -n $ENDOR_NAMESPACE --filter "{filter_string}"
+npx -y endorctl api list --resource Finding -n $ENDOR_NAMESPACE --filter "{filter_string}" 2>/dev/null
 ```
+
+**Important:** Always redirect stderr with `2>/dev/null` when piping to a JSON parser, as endorctl writes progress messages to stderr that will corrupt the JSON output.
+
+#### CLI Response Structure
+
+The CLI returns JSON with this structure. Use these exact field paths when parsing:
+
+```
+{
+  "list": {
+    "objects": [
+      {
+        "uuid": "...",
+        "meta": {
+          "description": "GHSA-xxxx: Human-readable title",  // <-- Use for display title
+          "name": "finding_type_name"
+        },
+        "spec": {
+          "level": "FINDING_LEVEL_CRITICAL",                  // <-- Severity level
+          "extra_key": "GHSA-xxxx-xxxx-xxxx",                 // <-- GHSA/CVE identifier
+          "target_dependency_package_name": "pypi://pkg@1.0", // <-- NOTE: includes ecosystem prefix
+          "target_dependency_version": "1.0",
+          "finding_categories": ["FINDING_CATEGORY_VULNERABILITY", ...],
+          "finding_tags": ["FINDING_TAGS_REACHABLE_FUNCTION", ...],
+          "remediation": "Update project to use pkg version 1.2.3 (current: 1.0, latest: 2.0).",  // <-- Plain string, NOT a nested object
+          "finding_metadata": {
+            "vulnerability": {
+              "meta": { "name": "GHSA-xxxx-xxxx-xxxx" },     // <-- GHSA ID
+              "spec": {
+                "summary": "Short vulnerability description",
+                "cvss_v3_severity": { "score": 9.8 }          // <-- CVSS score
+              }
+            }
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+**Key gotchas when parsing CLI output:**
+- `spec.remediation` is a **plain string** (e.g., `"Update ... to use pkg version X.Y.Z"`), NOT a nested object
+- `spec.target_dependency_package_name` includes the ecosystem prefix (e.g., `pypi://django@4.2`). Strip the prefix for display.
+- The CVE/GHSA ID is in `spec.extra_key` or `spec.finding_metadata.vulnerability.meta.name`
+- CVSS score is at `spec.finding_metadata.vulnerability.spec.cvss_v3_severity.score`
 
 ### Step 3: Present Results
 

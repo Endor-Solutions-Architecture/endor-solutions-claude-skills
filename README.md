@@ -29,7 +29,12 @@ The `.claude/settings.json` in this repository is already configured with the En
   "mcpServers": {
     "endor-cli-tools": {
       "command": "npx",
-      "args": ["-y", "endorctl", "ai-tools", "mcp-server"],
+      "args": [
+        "-y",
+        "endorctl",
+        "ai-tools",
+        "mcp-server"
+      ],
       "env": {
         "ENDOR_NAMESPACE": "your-namespace",
         "ENDOR_API": "https://api.endorlabs.com",
@@ -240,7 +245,6 @@ This project includes automatic security rules in `.claude/rules/` that trigger 
 ├── settings.json           # MCP server configuration
 ├── settings.local.json     # Local overrides (gitignored)
 ├── skills/
-│   ├── README.md           # This file
 │   ├── endor/              # Main router skill
 │   ├── endor-setup/        # Onboarding wizard
 │   ├── endor-demo/         # Demo mode

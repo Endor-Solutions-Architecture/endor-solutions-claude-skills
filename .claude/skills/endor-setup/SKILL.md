@@ -69,29 +69,19 @@ Create or update `.claude/settings.json` in the project root:
         "-y",
         "endorctl",
         "ai-tools",
-        "mcp-server",
-        "--config-path",
-        ".endorctl-mcp"
+        "mcp-server"
       ],
       "env": {
-        "MCP_ENDOR_CONFIG_PATH": ".endorctl-mcp",
-        "ENDOR_MCP_SERVER_AUTH_MODE": "google",
+        "ENDOR_NAMESPACE": "your-namespace",
         "ENDOR_API": "https://api.endorlabs.com",
-        "ENDOR_NAMESPACE": "demo-trial"
+        "ENDOR_MCP_SERVER_AUTH_MODE": "google"
       }
     }
   }
 }
 ```
 
-### 2.3 Create the config directory
-
-```bash
-mkdir -p .endorctl-mcp
-touch .endorctl-mcp/config.yaml
-```
-
-### 2.4 Important: Restart Required
+### 2.3 Important: Restart Required
 
 Tell the user: **You must restart Claude Code after creating or modifying settings.json for the MCP server to become available.**
 
