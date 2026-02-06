@@ -33,17 +33,22 @@ Identify the repository being scanned:
 
 ### Step 2: Run Scan
 
-Use the `scan_repository` MCP tool:
+Use the `scan` MCP tool with **all scan types** enabled:
 
 - `path`: Current working directory (or user-specified path)
-- `languages`: Detected languages
-- `reachability`: false (quick scan)
+- `scan_types`: `["vulnerabilities", "dependencies", "sast", "secrets"]`
 
-If the MCP tool is not available, fall back to CLI:
+**IMPORTANT:** Always include `"sast"` in `scan_types`. Without it, SAST findings will not be returned.
+
+If the user explicitly requests specific scan types (e.g. "only SCA" or "only SAST"), adjust `scan_types` accordingly, but the default should always include all four types above.
+
+If the MCP tool is not available or fails due to auth errors, fall back to CLI:
 
 ```bash
-endorctl scan --path . --output-type summary
+endorctl scan --path . --quick-scan --dependencies --sast --secrets --output-type summary
 ```
+
+**IMPORTANT:** The `--sast` flag must be explicitly passed to the CLI. Without it, only SCA/dependency findings are returned. Similarly, `--secrets` must be explicit. The `--dependencies` flag enables SCA scanning.
 
 ### Step 3: Present Results
 
