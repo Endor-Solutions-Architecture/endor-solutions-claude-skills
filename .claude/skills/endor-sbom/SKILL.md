@@ -12,7 +12,7 @@ Manage Software Bill of Materials - export, import, analyze, and compare.
 ## Prerequisites
 
 - Endor Labs MCP server configured (run `/endor-setup` if not)
-- `endorctl` CLI installed for export/import operations
+- Node.js v18+ with `npx` available (for CLI operations)
 
 ## Supported Actions
 
@@ -30,7 +30,9 @@ Manage Software Bill of Materials - export, import, analyze, and compare.
 
 #### Step 1: Get Project UUID
 
-Use `get_repository_uuid` or `projects_by_name` MCP tool to find the project.
+Use the `get_resource` MCP tool to find the project:
+- `resource_type`: `Project`
+- `name`: The project/repository name
 
 If the project hasn't been scanned yet, suggest running `/endor-scan` first.
 
@@ -38,10 +40,10 @@ If the project hasn't been scanned yet, suggest running `/endor-scan` first.
 
 ```bash
 # CycloneDX format (recommended)
-endorctl sbom export --project-uuid {uuid} --format cyclonedx --output sbom-cyclonedx.json
+npx -y endorctl sbom export --project-uuid {uuid} --format cyclonedx --output sbom-cyclonedx.json
 
 # SPDX format
-endorctl sbom export --project-uuid {uuid} --format spdx --output sbom-spdx.json
+npx -y endorctl sbom export --project-uuid {uuid} --format spdx --output sbom-spdx.json
 ```
 
 #### Step 3: Present Summary

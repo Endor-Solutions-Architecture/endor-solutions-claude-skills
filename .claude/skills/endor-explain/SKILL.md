@@ -29,14 +29,9 @@ The user can provide:
 
 Use `get_endor_vulnerability` MCP tool with the CVE ID.
 
-#### Step 2: Find Affected Projects
+#### Step 2: Check if it affects current project
 
-Use `get_security_findings` with filter:
-```
-spec.finding_categories contains FINDING_CATEGORY_VULNERABILITY
-```
-
-Search results for the specific CVE to see if it affects the current project.
+Use the `check_dependency_for_vulnerabilities` MCP tool to see if any of the project's dependencies are affected by this CVE. Check the relevant packages from the project's manifest files.
 
 #### Step 3: Present Explanation
 
@@ -108,11 +103,13 @@ Search results for the specific CVE to see if it affects the current project.
 
 #### Step 1: Get Finding Details
 
-Use `retrieve_single_finding` MCP tool with the UUID.
+Use the `get_resource` MCP tool:
+- `uuid`: The finding UUID
+- `resource_type`: `Finding`
 
-#### Step 2: Get Code Context (for SAST findings)
+#### Step 2: Get Related Vulnerability (if applicable)
 
-If the finding is a SAST finding, use `sast_context` MCP tool to get the code context.
+If the finding references a CVE, also use `get_endor_vulnerability` to get full CVE details.
 
 #### Step 3: Present Finding Details
 

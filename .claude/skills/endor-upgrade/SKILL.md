@@ -26,47 +26,40 @@ Parse the user's input to extract:
 
 ### Step 1: Identify Current State
 
-1. Find the project UUID using `projects_by_name` or `get_repository_uuid` MCP tool
-2. Detect the current version of the dependency from the project's manifest file
+1. Detect the current version of the dependency from the project's manifest file (e.g., `package.json`, `go.mod`, `requirements.txt`)
+2. Check current vulnerabilities using `check_dependency_for_vulnerabilities` MCP tool with `ecosystem`, `dependency_name`, and `version`
 
 ### Step 2: Get Upgrade Analysis
 
 **Approach 1 - MCP Tools (Preferred):**
 
-Use `get_dependency_upgrade_opts` to get available upgrade options with CIA data.
+1. Use `check_dependency_for_vulnerabilities` MCP tool to check both the current and target versions:
+   - `ecosystem`: Package ecosystem (`npm`, `python`, `go`, `java`, `maven`)
+   - `dependency_name`: Package name (for Maven: `groupid:artifactid`)
+   - `version`: Current version, then target version
 
-**Approach 2 - API Call (Fallback):**
+2. Use `get_resource` MCP tool to get package version details:
+   - `resource_type`: `PackageVersion`
+   - `name`: `{ecosystem}://{package}@{version}`
 
-Call the VersionUpgradeService API:
+3. Use `get_resource` to get package metrics for scoring:
+   - `resource_type`: `Metric`
+   - `name`: `package_version_scorecard` (with the package UUID as parent)
 
-```
-POST /v1/namespaces/{namespace}/version-upgrades
-```
-
-Request body:
-```json
-{
-  "context": {
-    "type": "project",
-    "id": "{project_uuid}"
-  },
-  "request": {
-    "package_version": "{ecosystem}://{package}@{current_version}",
-    "target_version": "{target_version}"
-  }
-}
-```
-
-Then poll for results:
-```
-GET /v1/namespaces/{namespace}/version-upgrades/{uuid}
-```
-
-**Approach 3 - CLI Fallback:**
+**Approach 2 - CLI (Fallback):**
 
 ```bash
-endorctl recommend dependency-upgrades --security-only --use-cia --persist --project-uuid=$PROJECT_UUID -n $ENDOR_NAMESPACE
+# Get upgrade recommendations with Change Impact Analysis
+npx -y endorctl recommend dependency-upgrades --security-only --use-cia --persist --project-uuid=$PROJECT_UUID -n $ENDOR_NAMESPACE 2>/dev/null
+
+# Or query version upgrade service via API
+npx -y endorctl api create --resource VersionUpgrade -n $ENDOR_NAMESPACE --data '{
+  "context": {"type": "project", "id": "{project_uuid}"},
+  "request": {"package_version": "{ecosystem}://{package}@{current_version}", "target_version": "{target_version}"}
+}' 2>/dev/null
 ```
+
+**Important:** Always use `2>/dev/null` when piping CLI output to a JSON parser (stderr contains progress messages that corrupt JSON parsing).
 
 ### Step 3: Present Analysis
 
@@ -136,10 +129,9 @@ endorctl recommend dependency-upgrades --security-only --use-cia --persist --pro
 
 ## Data Source Priority
 
-1. MCP Tools (preferred) - `get_dependency_upgrade_opts`, `get_security_findings`
-2. API calls - VersionUpgradeService endpoints
-3. CLI fallback - `endorctl recommend dependency-upgrades`
-4. **NEVER search the internet for upgrade recommendations**
+1. MCP Tools (preferred) - `check_dependency_for_vulnerabilities`, `get_resource`
+2. CLI fallback - `npx -y endorctl recommend dependency-upgrades`
+3. **NEVER search the internet for upgrade recommendations**
 
 ## Key Concepts
 

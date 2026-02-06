@@ -34,16 +34,20 @@ Scan your codebase for exposed secrets, credentials, and sensitive data.
 
 ### Step 1: Run Secrets Scan
 
-Use the `endor-labs-cli` MCP tool with secrets ruleset:
+Use the `scan` MCP tool with secrets-specific parameters:
 
-- `path`: Current working directory (or user-specified path/file)
-- `ruleset`: secrets
+- `path`: The **absolute path** to the repository root (or specific directory)
+- `scan_types`: `["secrets"]`
+- `scan_options`: `{ "quick_scan": true }`
 
-If the MCP tool is not available, check for secrets findings from a previous scan:
+The scan returns finding UUIDs. For each finding, use the `get_resource` MCP tool:
+- `uuid`: The finding UUID
+- `resource_type`: `Finding`
 
-Use `get_security_findings` with filter:
-```
-spec.finding_categories contains FINDING_CATEGORY_SECRETS
+If the MCP tool is not available, fall back to CLI:
+
+```bash
+npx -y endorctl scan --path $(pwd) --secrets --output-type summary
 ```
 
 ### Step 2: Present Results

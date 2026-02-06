@@ -8,6 +8,13 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_SOURCE="$SCRIPT_DIR/.claude"
 
+# Validate source directory
+if [ ! -d "$SKILL_SOURCE/skills" ]; then
+    echo "Error: Skills directory not found at $SKILL_SOURCE/skills"
+    echo "Please run this script from the endor-solutions-claude-skills repository root."
+    exit 1
+fi
+
 echo "==================================="
 echo "Endor Labs Claude Code Skill Setup"
 echo "==================================="
@@ -19,7 +26,7 @@ if ! command -v endorctl &> /dev/null; then
     echo "Install it with one of these methods:"
     echo "  - brew install endorlabs/tap/endorctl"
     echo "  - npm install -g endorctl"
-    echo "  - curl -sSL https://api.endorlabs.com/download/latest/endorctl_\$(uname -s | tr '[:upper:]' '[:lower:]')_amd64 -o endorctl"
+    echo "  - curl -sSL https://api.endorlabs.com/download/latest/endorctl_\$(uname -s | tr '[:upper:]' '[:lower:]')_\$(uname -m | sed 's/x86_64/amd64/' | sed 's/aarch64/arm64/') -o endorctl && chmod +x endorctl"
     echo
 fi
 
@@ -55,17 +62,23 @@ case $choice in
 esac
 
 # Create directory if needed
-mkdir -p "$INSTALL_DIR/commands"
+mkdir -p "$INSTALL_DIR/skills"
 mkdir -p "$INSTALL_DIR/rules"
 
 # Copy files
 echo "Installing to $INSTALL_DIR..."
 
-# Copy commands
-cp -r "$SKILL_SOURCE/commands/"* "$INSTALL_DIR/commands/" 2>/dev/null || true
+# Copy skills
+if ! cp -r "$SKILL_SOURCE/skills/"* "$INSTALL_DIR/skills/"; then
+    echo "Error: Failed to copy skills from $SKILL_SOURCE/skills/"
+    exit 1
+fi
 
 # Copy rules
-cp -r "$SKILL_SOURCE/rules/"* "$INSTALL_DIR/rules/" 2>/dev/null || true
+if ! cp -r "$SKILL_SOURCE/rules/"* "$INSTALL_DIR/rules/"; then
+    echo "Error: Failed to copy rules from $SKILL_SOURCE/rules/"
+    exit 1
+fi
 
 # Merge or create settings.json
 if [ -f "$INSTALL_DIR/settings.json" ]; then
@@ -95,17 +108,31 @@ echo "Installation complete!"
 echo "==================================="
 echo
 echo "Available commands:"
-echo "  /endor        - Main security assistant"
-echo "  /endor-scan   - Quick repository scan"
-echo "  /endor-check  - Check specific dependency"
-echo "  /endor-findings - Show security findings"
-echo "  /endor-fix    - Remediate vulnerabilities"
-echo "  /endor-explain - Explain a CVE"
-echo "  /endor-api    - Direct API access"
+echo "  /endor            - Main security assistant (routes to specialized skills)"
+echo "  /endor-setup      - First-time setup wizard"
+echo "  /endor-help       - Full command reference"
+echo "  /endor-scan       - Quick security scan"
+echo "  /endor-scan-full  - Deep scan with reachability analysis"
+echo "  /endor-check      - Check a dependency for vulnerabilities"
+echo "  /endor-fix        - Remediate vulnerabilities"
+echo "  /endor-explain    - Explain a CVE"
+echo "  /endor-findings   - View security findings"
+echo "  /endor-review     - Pre-PR security review"
+echo "  /endor-score      - Package health scores"
+echo "  /endor-upgrade    - Analyze upgrade impact"
+echo "  /endor-secrets    - Scan for exposed secrets"
+echo "  /endor-sast       - Static application security testing"
+echo "  /endor-license    - License compliance check"
+echo "  /endor-container  - Container/Dockerfile scanning"
+echo "  /endor-sbom       - Software Bill of Materials"
+echo "  /endor-policy     - Security policy management"
+echo "  /endor-cicd       - Generate CI/CD pipelines"
+echo "  /endor-api        - Direct API access"
+echo "  /endor-demo       - Try without an account"
 echo
 echo "Next steps:"
-echo "1. Ensure endorctl is installed and authenticated (endorctl init)"
-echo "2. Set ENDOR_NAMESPACE environment variable"
-echo "3. Restart Claude Code to load the skill"
+echo "1. Set ENDOR_NAMESPACE in .claude/settings.json (or export ENDOR_NAMESPACE=your-namespace)"
+echo "2. Restart Claude Code to load the MCP server and skills"
+echo "3. Run /endor-setup if you need help with authentication"
 echo
-echo "Try it: /endor scan"
+echo "Try it: /endor-scan"
