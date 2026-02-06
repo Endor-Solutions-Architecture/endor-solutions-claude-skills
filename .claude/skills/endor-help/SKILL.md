@@ -47,6 +47,7 @@ Present this reference to the user:
 | `/endor-findings` | View security findings with filters |
 | `/endor-fix <CVE>` | Get remediation guidance for a vulnerability |
 | `/endor-explain <CVE>` | Get detailed CVE or finding information |
+| `/endor-troubleshoot` | Diagnose scan errors and get resolution guidance |
 
 ### Compliance & Governance
 | Command | Description |
@@ -71,6 +72,7 @@ Present this reference to the user:
 /endor-upgrade lodash 4.17.21       # Check upgrade impact
 /endor-findings critical reachable  # Filter findings
 /endor-review                        # Pre-PR security check
+/endor-troubleshoot                  # Diagnose scan errors
 ```
 
 ### Tips
@@ -79,6 +81,7 @@ Present this reference to the user:
 - Use `/endor-scan-full` before releases for comprehensive analysis
 - Run `/endor-review` before creating pull requests
 - Check `/endor-score` before adding new dependencies
+- Use `/endor-troubleshoot` when a scan fails to diagnose the issue
 ```
 
 ## Contextual Help
