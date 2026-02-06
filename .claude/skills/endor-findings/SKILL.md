@@ -155,6 +155,10 @@ Always present findings in this priority:
 6. License issues
 7. Medium/Low
 
+## Data Sources — Endor Labs Only
+
+**CRITICAL: NEVER use external websites for finding details or vulnerability information.** All data MUST come from Endor Labs MCP tools or the `endorctl` CLI. Do NOT search the web or visit external vulnerability databases. If data is unavailable, tell the user and suggest [app.endorlabs.com](https://app.endorlabs.com).
+
 ## Error Handling
 
 - **No findings**: Could mean no scan has been run. Suggest `/endor-scan`.

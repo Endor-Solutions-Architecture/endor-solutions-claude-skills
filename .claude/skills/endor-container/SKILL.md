@@ -221,6 +221,10 @@ Present results similar to `/endor-scan` output.
 3. **Add to CI/CD:** `/endor-cicd` for automated container scanning
 4. **Set policies:** `/endor-policy` to enforce container security standards
 
+## Data Sources — Endor Labs Only
+
+**CRITICAL: NEVER use external websites for container vulnerability or security information.** All data MUST come from Endor Labs MCP tools or the `endorctl` CLI. Do NOT search the web, Docker Hub, or external vulnerability databases. If data is unavailable, tell the user and suggest [app.endorlabs.com](https://app.endorlabs.com).
+
 ## Error Handling
 
 - **No Dockerfile found**: Ask user for the path or if they want to create one

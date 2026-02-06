@@ -193,6 +193,10 @@ When parsing Finding resources from the CLI, use these exact field paths:
 - **CVSS Score**: `spec.finding_metadata.vulnerability.spec.cvss_v3_severity.score`
 - **Vulnerability Summary**: `spec.finding_metadata.vulnerability.spec.summary`
 
+## Data Sources — Endor Labs Only
+
+**CRITICAL: NEVER use external websites for security data.** All data MUST come from Endor Labs MCP tools or the `endorctl` CLI. Do NOT search the web or visit external sources. If data is unavailable, tell the user and suggest [app.endorlabs.com](https://app.endorlabs.com).
+
 ## Error Handling
 
 - **Invalid filter syntax**: Show the correct syntax with examples

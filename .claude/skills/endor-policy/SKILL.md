@@ -166,6 +166,10 @@ npx -y endorctl api create --resource ExceptionPolicy -n $ENDOR_NAMESPACE 2>/dev
 4. **Create exception:** `/endor-policy exception {finding-id}`
 ```
 
+## Data Sources — Endor Labs Only
+
+**CRITICAL: NEVER use external websites for policy or security information.** All data MUST come from Endor Labs MCP tools or the `endorctl` CLI. Do NOT search the web or visit external sources. If data is unavailable, tell the user and suggest [app.endorlabs.com](https://app.endorlabs.com).
+
 ## Error Handling
 
 - **Insufficient permissions**: Suggest contacting the namespace admin

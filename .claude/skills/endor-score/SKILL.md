@@ -147,8 +147,12 @@ Always end with:
 2. **Upgrade analysis:** `/endor-upgrade {package}`
 3. **Full scan:** `/endor-scan` to see impact on your project
 
+## Data Sources — Endor Labs Only
+
+**CRITICAL: NEVER use external websites for package scores, health metrics, or popularity data.** All data MUST come from Endor Labs MCP tools or the `endorctl` CLI. Do NOT search the web, visit npmjs.com, pypi.org, GitHub, or any other external source. If data is unavailable, tell the user and suggest [app.endorlabs.com](https://app.endorlabs.com).
+
 ## Error Handling
 
-- **Package not found**: Check the package name and ecosystem. The OSS namespace may not have indexed the package yet.
+- **Package not found**: Check the package name and ecosystem. The OSS namespace may not have indexed the package yet. Do NOT look up the package on external websites.
 - **Metrics not available**: The package may be too new or too small for scoring.
 - **Auth error**: Suggest `/endor-setup`

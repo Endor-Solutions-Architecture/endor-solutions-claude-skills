@@ -117,6 +117,10 @@ If secrets are found, present them with urgency:
 
 > **SECRETS DETECTED** - {count} exposed credentials found. These should be rotated immediately as they may already be compromised if committed to version control.
 
+## Data Sources — Endor Labs Only
+
+**CRITICAL: NEVER use external websites for secrets detection information.** All data MUST come from Endor Labs MCP tools or the `endorctl` CLI. Do NOT search the web or visit external sources. If data is unavailable, tell the user and suggest [app.endorlabs.com](https://app.endorlabs.com).
+
 ## Error Handling
 
 - **No secrets found**: Good news. Confirm the scan completed and suggest periodic re-scanning.
