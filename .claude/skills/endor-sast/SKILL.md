@@ -28,6 +28,19 @@ Perform static application security testing to find code-level vulnerabilities.
 | CORS Misconfiguration | CWE-942 | Medium - Cross-origin attacks |
 | Debug Mode in Production | CWE-489 | Medium - Info exposure |
 
+## AI False Positive Reduction
+
+Endor Labs offers AI-powered false positive analysis that uses an AI agent to review SAST findings and filter out false positives. This significantly reduces noise and lets you focus on real vulnerabilities.
+
+**This feature requires an Endor Labs Code Pro license.** When presenting the option, inform the user that AI false positive reduction is a Code Pro capability.
+
+**Before running the scan, ask the user if they want to enable AI false positive reduction.** Present it as an option:
+
+- **Without AI analysis** (default): Faster scan, may include false positives
+- **With AI analysis** (requires Code Pro license): Slower scan, but filters out false positives using AI review
+
+If the user opts in (or says things like "reduce false positives", "use AI", "filter noise"), enable the `--ai-sast-analysis=agent-fallback` flag. If they encounter a licensing error, explain that this feature requires the Endor Labs Code Pro license and suggest they contact their Endor Labs account team or visit [endorlabs.com](https://www.endorlabs.com) for more information.
+
 ## Workflow
 
 ### Step 1: Run SAST Scan
@@ -40,9 +53,17 @@ Use the `scan` MCP tool with SAST-specific parameters:
 
 If the MCP tool is not available, fall back to CLI:
 
+**Standard SAST scan:**
 ```bash
-npx -y endorctl scan --path $(pwd) --sast --output-type summary
+npx -y endorctl scan --path $(pwd) --sast --output-type summary 2>/dev/null
 ```
+
+**SAST scan with AI false positive reduction:**
+```bash
+npx -y endorctl scan --path $(pwd) --sast --ai-sast-analysis=agent-fallback --output-type summary 2>/dev/null
+```
+
+The `--ai-sast-analysis=agent-fallback` flag enables an AI agent that reviews each SAST finding to determine if it is a true positive or false positive. Findings identified as false positives are automatically filtered out of the results.
 
 ### Step 2: Retrieve Finding Details
 
@@ -62,6 +83,7 @@ Read the source files referenced in the findings to show the vulnerable code wit
 
 **Path:** {scanned path}
 **Issues Found:** {count}
+**AI False Positive Reduction:** {Enabled/Disabled}
 
 ### Critical Issues
 
