@@ -1,11 +1,13 @@
 ---
 name: endor-ai-sast
 description: >
-  Fetch and display AI-powered SAST findings from the Endor Labs platform. Use when the
-  user says "AI SAST results", "AI SAST findings", "AI static analysis", "endor ai sast",
-  "show AI SAST", or wants to view pre-computed AI-driven code security findings. Do NOT
-  use for running a new SAST scan (/endor-sast), viewing general findings (/endor-findings),
-  or explaining a specific CVE (/endor-explain).
+  Fetch and display AI-powered SAST findings from the Endor Labs platform. Default path is
+  summary-only (aggregated counts + clusters); full masked listing runs only when the user
+  asks to drill down (speed and token use). Use when the user says "AI SAST results",
+  "AI SAST findings", "AI static analysis", "endor ai sast", "show AI SAST", or wants
+  pre-computed AI-driven code security findings. Do NOT use for running a new SAST scan
+  (/endor-sast), viewing general findings (/endor-findings), or explaining a specific CVE
+  (/endor-explain).
 ---
 
 # Endor Labs AI SAST Analysis
@@ -17,6 +19,13 @@ Fetch AI-powered static analysis security findings using pre-computed data from 
 - Endor Labs authenticated (run `/endor-setup` if not)
 
 ## Workflow
+
+**Two phases (default: Phase 1 only):**
+
+| Phase | API calls | Purpose |
+|-------|-----------|---------|
+| **1 — Summary** | **3a** + **3b** only | Severity table + cluster lines. **Minimizes latency and token use.** Do **not** run **3c**. |
+| **2 — Detail** | **3c** (on user request) | `spec.explanation`, per-finding locations, data flow, filtered tables. Run only what the user asked for; **prefer a tighter filter** over loading the full list when possible. |
 
 ### Step 1: Resolve Namespace
 
@@ -52,22 +61,101 @@ Run this command ONCE with the normalized URL. Do NOT retry with URL variations.
 
 ### Step 3: Fetch AI SAST Findings
 
+Use the **same base filter** on every call below (advanced list API; grouping pattern aligns with `/endor-api` / `endorctl api list` filter syntax).
+
+Base filter (repeat in **3a**, **3b**, and **3c**):
+
+`'context.type == CONTEXT_TYPE_MAIN and spec.project_uuid == "{PROJECT_UUID}" and spec.method == SYSTEM_EVALUATION_METHOD_DEFINITION_AI_SAST'`
+
+#### Step 3a: Severity summary (run first — fast)
+
+One grouped query returns counts per `spec.level` without pulling explanations or large payloads:
+
+```bash
+npx -y endorctl api list -r Finding -n $ENDOR_NAMESPACE \
+  -f 'context.type == CONTEXT_TYPE_MAIN and spec.project_uuid == "{PROJECT_UUID}" and spec.method == SYSTEM_EVALUATION_METHOD_DEFINITION_AI_SAST' \
+  --group-aggregation-paths "spec.level" \
+  | tee /tmp/endor_ai_sast_summary.txt
+```
+
+Use stdout-only piping to `tee` (do **not** use `2>&1`) so the saved file stays pure JSON for `jq`. Endorctl writes upgrade notices to stderr.
+
+**Short-circuit:** If the grouped response has **no findings** (total count is 0), respond with exactly: `"No AI SAST findings are available for this project at this moment."` — no further explanation. **Do not run Steps 3b or 3c** (there is nothing to drill into).
+
+Total count (for the short-circuit check and the summary **Total** row):
+
+```bash
+jq '[(.group_response.groups // {}) | to_entries[] | .value.aggregation_count.count] | add // 0' /tmp/endor_ai_sast_summary.txt
+```
+
+Optional: map enum levels to counts for the summary table (parse `group_response`):
+
+```bash
+jq -r '.group_response.groups // {} | to_entries[] | (.key | fromjson | .[] | select(.key=="spec.level") | .value) as $lvl | "\($lvl) \(.value.aggregation_count.count)"' /tmp/endor_ai_sast_summary.txt
+```
+
+#### Step 3b: Vulnerability clusters (fast — only if Step 3a shows at least one finding)
+
+Two grouped queries replace parsing the full listing for **cluster counts**, **distinct files per cluster**, and **severity mix per cluster** (for titles like `[Critical/High]`). Run both after **3a** succeeds.
+
+**3b(i)** — Total findings and **distinct file paths** per `meta.description`:
+
+```bash
+npx -y endorctl api list -r Finding -n $ENDOR_NAMESPACE \
+  -f 'context.type == CONTEXT_TYPE_MAIN and spec.project_uuid == "{PROJECT_UUID}" and spec.method == SYSTEM_EVALUATION_METHOD_DEFINITION_AI_SAST' \
+  --group-aggregation-paths "meta.description" \
+  --group-unique-count-paths "spec.dependency_file_paths" \
+  | tee /tmp/endor_ai_sast_cluster_counts.txt
+```
+
+Per-cluster finding count: `aggregation_count.count`. Distinct locations: `unique_counts.spec.dependency_file_paths.count`.
+
+**3b(ii)** — Counts per **`meta.description` × `spec.level`** (derive highest severity present and multi-level labels for Step 4b):
+
+```bash
+npx -y endorctl api list -r Finding -n $ENDOR_NAMESPACE \
+  -f 'context.type == CONTEXT_TYPE_MAIN and spec.project_uuid == "{PROJECT_UUID}" and spec.method == SYSTEM_EVALUATION_METHOD_DEFINITION_AI_SAST' \
+  --group-aggregation-paths "meta.description" \
+  --group-aggregation-paths "spec.level" \
+  | tee /tmp/endor_ai_sast_cluster_severity.txt
+```
+
+Each `group_response.groups` key is a JSON array of `{key, value}` pairs (description and level). Sum `aggregation_count.count` over entries that share the same `meta.description` to match **3b(i)** totals. For each description, note which `FINDING_LEVEL_*` values appear to sort clusters and to label `[Critical]`, `[High]`, `[Critical/High]`, etc.
+
+#### Step 3c: Full findings (Phase 2 only — when the user asks for detail)
+
+**Do not run in the default flow.** Run **3c** only after the user chooses a drill-down (see **Step 4d**). This call pulls large `spec.explanation` text; keep it **scoped** to what they asked for.
+
+**Default 3c command** (entire AI SAST set — use only if they want everything, e.g. "load all findings" or "full report"):
+
 ```bash
 npx -y endorctl api list -r Finding -n $ENDOR_NAMESPACE \
   -f 'context.type == CONTEXT_TYPE_MAIN and spec.project_uuid == "{PROJECT_UUID}" and spec.method == SYSTEM_EVALUATION_METHOD_DEFINITION_AI_SAST' \
   --field-mask meta.description,spec.explanation,spec.dependency_file_paths,spec.level \
-  2>&1 | tee /tmp/endor_sast_findings_output.txt
+  --list-all \
+  | tee /tmp/endor_sast_findings_output.txt
 ```
 
-If the output is empty, respond with exactly: `"No AI SAST findings are available for this project at this moment."` — no further explanation.
+**Prefer narrower filters** (append to the base filter with `and ...`) to cut volume and tokens:
+
+| User request | Add to filter (examples) |
+|--------------|-------------------------|
+| Critical only | `and spec.level==FINDING_LEVEL_CRITICAL` |
+| High and Critical | `and spec.level in [FINDING_LEVEL_CRITICAL, FINDING_LEVEL_HIGH]` |
+| One cluster / CWE | `and meta.description contains "SQL Injection"` (match substring of the full `meta.description` string) |
+| One file | `and spec.dependency_file_paths contains "path/to/file.cs"` (if the API supports `contains` on that field; otherwise run full **3c** and filter in presentation) |
+
+Re-run **3c** when the user’s *next* question needs different fields or a different filter; do not load the full list preemptively.
 
 ### Step 4: Present Results
 
-Parse the results from Step 3 and present them using the **tiered output format** below. The goal is to answer "what should I worry about?" — not dump everything at once.
+**Phase 1 (default):** Present **4a** and **4b** from **3a** and **3b** only. **Stop** after **4d** (drill-down prompt) — do **not** run **3c**, do **not** show **4c** unless the user continues to Phase 2.
+
+**Phase 2:** After the user answers **4d** (or explicitly asks for detail), run **3c** as needed, then **4c** / full drill-down content. The goal is to answer "what should I worry about?" first with **minimal** API and context size, then pay for detail on demand.
 
 #### 4a: Severity Breakdown
 
-Show a summary count table:
+Build the summary count table from **Step 3a** (map `FINDING_LEVEL_*` to Critical / High / Medium / Low). If you already showed counts from 3a, keep this section brief:
 
 ```
 ## AI SAST Findings Summary
@@ -83,7 +171,7 @@ Show a summary count table:
 
 #### 4b: Actionable Groups
 
-Group findings by vulnerability type (using `meta.description`) and present as actionable clusters.
+Build clusters from **Step 3b**: use **`meta.description`** strings from the grouped responses (not the full **Step 3c** list). **3b(i)** supplies finding counts and distinct file counts (`N findings across M files`). **3b(ii)** supplies which severity levels appear per description — map to short severity labels for each cluster (sort by highest severity present, then by count).
 
 **Short titles:** Use concise names in the output, not full CWE descriptions. Map verbose `meta.description` values to short labels:
 
@@ -127,7 +215,7 @@ Group findings by vulnerability type (using `meta.description`) and present as a
 - **Authorization Bypass (IDOR)** (5 findings across 4 files) [High] — enforce server-side ownership checks in middleware
 ```
 
-**Remediation suggestions:** Provide a specific, actionable remediation per cluster — not generic "review and remediate." Use the mapping below as a starting point, and tailor based on what `spec.explanation` reveals about root causes:
+**Remediation suggestions (Phase 1):** Use the **generic** mapping below — one line per cluster. Do **not** run **3c** just to tailor text. After Phase 2, you may refine using `spec.explanation` from **3c**.
 
 | Cluster | Remediation |
 |---------|-------------|
@@ -163,11 +251,13 @@ After the multi-finding clusters, add a single rollup line for all single-findin
 - *+ N other finding types with 1 finding each (use drill-down to explore)*
 ```
 
-Identify common root causes within each cluster and tailor the remediation suggestion accordingly. This turns many individual findings into a smaller number of action items.
+In Phase 2, use `spec.explanation` to sharpen remediation if it contradicts the generic line.
 
-#### 4c: Critical Findings Detail
+#### 4c: Critical Findings Detail (Phase 2 — requires **3c** first)
 
-Show a **compact one-line-per-finding table** for **Critical severity only** by default:
+Only after the user asks for per-finding detail (e.g. Critical table, file list, explanations). Run **3c** with `and spec.level==FINDING_LEVEL_CRITICAL` when they want Critical-only — **do not** pull the full finding set unless they ask.
+
+Using **Step 3c** output, show a **compact one-line-per-finding table** for **Critical severity** when that was the ask (for other severities or clusters, filter **3c** accordingly):
 
 ```
 ### Critical Findings
@@ -184,22 +274,30 @@ Sort rows by vulnerability type (group related findings together).
 
 **Title/summary cross-check:** If the `spec.explanation` summary clearly describes a different vulnerability class than `meta.description` suggests (e.g., `meta.description` says "SQL Injection" but the summary describes a MongoDB `$where` NoSQL injection), use the **summary-derived type** for the short title in the table. The summary is closer to the actual finding; `meta.description` can be a rough CWE category that doesn't match the specific issue.
 
-**Do NOT include the Data Flow column in the default output.** Data flow is available on demand (see Step 4d).
+**Do NOT include the Data Flow column** until the user asks for it (Phase 2). Data flow lives under `spec.explanation` (see **4d**).
 
-#### 4d: Drill-Down Prompt
+#### 4d: End Phase 1 — Drill-Down Prompt (always show this after 4a + 4b)
 
-After presenting the default output, offer drill-down options:
+Phase 1 **ends here.** Ask what to load next — **do not** run **3c** until the user replies.
 
 ```
 ---
-**Want more detail?** Try:
-- "Show all High findings"
-- "Show data flow for finding #3"
-- "Expand the SQL Injection cluster"
-- "Show all findings in routes/login.ts"
+**Summary only so far** (no explanations or file-level detail loaded — fast / low tokens).
+
+**What should we drill into?** Examples:
+- "Critical findings table" → run **3c** with `spec.level==FINDING_LEVEL_CRITICAL`, then **4c**
+- "High findings" → **3c** filtered to High (and Critical if they want)
+- "Expand XSS cluster" → **3c** with `meta.description contains "Cross-site Scripting"` (match their CWE string from Phase 1)
+- "Data flow for finding #3" → run **3c** (narrow filter if they named severity/cluster), locate the finding, paste Data Flow from `spec.explanation`
+- "Full explanations for everything" → full **3c** with `--list-all` (expensive — confirm scope if counts are large)
 ```
 
-When the user requests a drill-down, show the full detail for the requested findings including:
+#### Phase 2 — After the user chooses
+
+1. Run **3c** with the **smallest** filter that satisfies the request.
+2. Present tables or verbatim fields from **3c** output.
+
+Full finding fields for drill-down:
 
 - **Title**: value of `meta.description` — copy verbatim
 - **Finding Location**: value of `spec.dependency_file_paths`
